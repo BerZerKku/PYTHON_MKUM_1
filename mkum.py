@@ -11,6 +11,7 @@ from PyQt4 import QtCore
 import tab_adjust
 import setupCOM
 import interface
+import mySpreadsheet
 
 
 class MyFrame(QtGui.QMainWindow):
@@ -25,7 +26,7 @@ class MyFrame(QtGui.QMainWindow):
         # и вызываем функ-цию установки положения на экране
 #        self.resize(400, 200)
         self.center()
-        
+    
         self.num = 0
         self.devInfo = {}
         
@@ -55,9 +56,11 @@ class MyFrame(QtGui.QMainWindow):
         self.createPort()
             
     def evPrev(self):
+        # self.interface.repeatStop()
         pass
     
     def evNext(self):
+        self.interface.sendData('55 AA 01 00 01')
         pass
     
     def evPressTree(self, item, a):
@@ -108,6 +111,7 @@ class MyFrame(QtGui.QMainWindow):
         self.interface.setBaudRate(self.setupCOM.baudRateEdit.currentText())
         self.interface.setParity(self.setupCOM.parityEdit.currentText())
         self.interface.setStopBits(self.setupCOM.stopBitsEdit.currentText())
+        self.setupCOM.clearFlagModify()
     
     def evShowSetupPort(self):
         ''' (self) -> None
@@ -118,7 +122,8 @@ class MyFrame(QtGui.QMainWindow):
         self.setupCOM.show()
     
     def updatePorts(self):
-        self.setupCOM.fillPortBox(self.interface.getAvailablePorts())
+        self.setupCOM.fillPortBox(self.interface.getAvailablePorts(),
+                                  self.interface.getPortName())
              
     def evClosePort(self):
         ''' (self) -> None
@@ -146,7 +151,7 @@ class MyFrame(QtGui.QMainWindow):
             self.aSetupPort.setDisabled(True)
             self.aClosePort.setEnabled(True)
         except:
-#            print 'evOpenPort неудалось открыть порт'
+            print 'evOpenPort неудалось открыть порт'
             pass
                   
     def fillProjectTree(self):
@@ -204,6 +209,13 @@ class MyFrame(QtGui.QMainWindow):
         
     def updateParamList(self):
         pass
+   
+    def printData(self):
+        '''
+        
+        '''
+        print 'ssss'
+#        self.tabAdjust1.debugTE.setText(data)
    
     def createStatusBar(self, parent=None):
         ''' (self, parent) -> QStatusBar
@@ -401,18 +413,30 @@ class MyFrame(QtGui.QMainWindow):
 #        self.group.setLayout(vbox)
     
     def createPort(self):
-        self.interface = interface.Interface()
+        ''' (self) -> None
+        
+            Создание переменных для работы с портом.
+        '''
+        self.interface = interface.Interface('COM1')
+        self.connect(self, QtCore.SIGNAL("signalSendData()"), self.printData)
         
         # создадим виджет настройки порта
         self.setupCOM = setupCOM.SetupCOM(parent=self)
         self.setupCOM.setWindowTitle(self.aSetupPort.text())
         self.setupCOM.setWindowIcon(self.aSetupPort.icon())
+        
         # заполним поля на форме
+        # и сбросим флаг наличия изменений
         self.updatePorts()
-        self.setupCOM.fillBaudRateBox(self.interface.getAvailableBaudRates())
-        self.setupCOM.fillStopBitsBox(self.interface.getAvailableStopBits())
-        self.setupCOM.fillByteSize(self.interface.getAvailableByteSize())
-        self.setupCOM.fillParityBox(self.interface.getAvailableParities())
+        self.setupCOM.fillBaudRateBox(self.interface.getAvailableBaudRates(),
+                                      self.interface.getBaudRate())
+        self.setupCOM.fillStopBitsBox(self.interface.getAvailableStopBits(),
+                                      self.interface.getStopBits())
+        self.setupCOM.fillByteSize(self.interface.getAvailableByteSize(),
+                                   self.interface.getByteSize())
+        self.setupCOM.fillParityBox(self.interface.getAvailableParities(),
+                                    self.interface.getParity())
+        self.setupCOM.clearFlagModify()
         
         # настройка сигналов и слотов
         #    сканирование доступных портов
@@ -430,6 +454,8 @@ class MyFrame(QtGui.QMainWindow):
     
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
+    
     my_frame = MyFrame()
     my_frame.show()
+    
     app.exec_()

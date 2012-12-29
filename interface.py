@@ -8,6 +8,7 @@ Created on 25.12.2012
 
 # -*- coding: cp1251 -*-
 import serial
+from PyQt4 import QtCore
 
 
 class Interface():
@@ -24,6 +25,10 @@ class Interface():
         self.PARITY = {'N': 'None', 'O': 'Odd', 'E': 'Even', \
                        'M': 'Mark', 'S': 'Space'}
         self._port = None
+        
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.repeatSendData)
+        self.data_temp = ''
     
     def __str__(self):
         val = ''
@@ -32,7 +37,6 @@ class Interface():
         val += 'bytesize = %s; ' % self.getByteSize()
         val += 'parity = %s; ' % self.getParity()
         val += 'stopbits = %s' % self.getStopBits()
-        
         return val
     
     def openPort(self):
@@ -55,6 +59,7 @@ class Interface():
         
             Окончание работы с портом.
         '''
+        self.timer.stop()
         self._port.close()
         
     def scanPorts(self):
@@ -72,7 +77,6 @@ class Interface():
         >>> ports.scanPorts()
         [(0, 'COM1'), (1, 'COM2'), (5, 'COM6')]
         '''
-
         available = []
         for i in range(256):
             try:
@@ -164,7 +168,7 @@ class Interface():
             if val in serial.Serial.BAUDRATES:
                 self._portBaudRate = val
         except:
-            pass
+            print self.setBaudRate
         
     def setByteSize(self, val):
         ''' (self, str) -> None
@@ -176,7 +180,7 @@ class Interface():
             if val in serial.Serial.BYTESIZES:
                 self._portByteSize = val
         except:
-            pass
+            print self.setByteSize
         
     def setParity(self, val):
         ''' (self, str) -> None
@@ -188,7 +192,7 @@ class Interface():
             if val in serial.Serial.PARITIES:
                 self._portParity = val
         except:
-            pass
+            print self.setParity
             
     def setStopBits(self, val):
         ''' (self, val) -> None
@@ -201,7 +205,7 @@ class Interface():
             if val in serial.Serial.STOPBITS:
                 self._portStopBits = val
         except:
-            pass
+            self.setStopBits(val)
         
     def getPortName(self):
         ''' (self) -> str
@@ -237,3 +241,56 @@ class Interface():
             Возвращает текущую настройку кол-ва стоп-битов.
         '''
         return str(self._portStopBits)
+    
+    def sendData(self, data, repeat=None):
+        ''' (self, str) -> number
+            
+            Передача данных data.
+            repeat отвечает за цикл повторения, задается в мс,
+            None - без изменений.
+            В случае успешной отправки, возвращает кол-во переданных байт.
+            
+            Примеры data:
+            '55 AA 01 00 01'
+        '''
+#        try:
+        if True:
+            tmp = bytearray()
+            for x in data.split():
+                tmp.append(x.decode('hex'))
+            self.data_temp = data
+            
+            a = QtCore.QObject()
+            a.emit(QtCore.SIGNAL('signalSendData()'))
+            
+            # проверим необходимость выполнения действий для вкл.откл.
+            # повторения посылок
+            if repeat != None:
+                if repeat == 0:
+                    self.timer.stop()
+                else:
+                    self.timer.stop()
+                    self.timer.setInterval(repeat)
+                    self.timer.start()
+                    
+            return self._port.write(tmp)
+#        except:
+#            print self.sendData, 'Ошибка при попытке отправить данные'
+    
+    def repeatSendData(self):
+        ''' (self) -> None
+        
+            Повторная отправка сообщения
+        '''
+        self.sendData(self.data_temp)
+        
+    def repeatStop(self):
+        ''' (self) -> None
+        
+            Остановка отправки повторных сообщений
+        '''
+        self.timer.stop()
+    
+if __name__ == '__main__':
+    print "Создан элемент port, выбран 'COM1'"
+    port = Interface('COM1')
