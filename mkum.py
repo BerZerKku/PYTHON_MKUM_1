@@ -7,11 +7,14 @@ Created on 19.12.2012
 import sys
 from PyQt4 import QtGui
 from PyQt4 import QtCore
+from PyQt4.QtCore import Qt
 
 import tab_adjust
 import setupCOM
 import interface
-import mySpreadsheet
+# import mySpreadsheet
+# подключение библиотеки иконок
+import resources_rc
 
 
 class MyFrame(QtGui.QMainWindow):
@@ -21,6 +24,10 @@ class MyFrame(QtGui.QMainWindow):
         # определяем геометрические размеры окна и
         # положение на экране
 #        self.setGeometry(300, 300, 250, 150)
+    
+        # внешний вид
+        # Windows, WindowsXP, Motif, CDE, Plastique, Cleanlooks
+        QtGui.QApplication.setStyle('Cleanlooks')
 
         # определяем геометрические размеры окна
         # и вызываем функ-цию установки положения на экране
@@ -31,7 +38,7 @@ class MyFrame(QtGui.QMainWindow):
         self.devInfo = {}
         
         # устанавливаем имя окна и иконку
-        self.setWindowTitle('MkUM')
+        self.setWindowTitle(u'Калибровка измерителя УМ')
         self.setWindowIcon(QtGui.QIcon('icons/MustHave/user_24x24.png'))
         
         # установка типа окна
@@ -46,7 +53,7 @@ class MyFrame(QtGui.QMainWindow):
         self.setWindowFlags(flag)
         
         # определяем строку подсказки и шрифт
-        self.setToolTip('This is <b>myFrame</b> widget')
+        self.setToolTip(u'This is <b>myFrame</b> widget')
         QtGui.QToolTip.setFont(QtGui.QFont('oldEnglish', 10))
         
         self.createMainWindow()
@@ -146,21 +153,22 @@ class MyFrame(QtGui.QMainWindow):
         '''
         try:
             self.interface.openPort()
+            
+            self.interface.sendData("55 AA 01 00 01", 1000)
                 
             self.aOpenPort.setDisabled(True)
             self.aSetupPort.setDisabled(True)
             self.aClosePort.setEnabled(True)
         except:
             print 'evOpenPort неудалось открыть порт'
-            pass
                   
-    def fillProjectTree(self):
-        ''' (self) -> None
+    def fillProjectTree(self, name):
+        ''' (self, str) -> None
             
-            Заполнение дерева проектов.
+            Заполнение ветки дерева проектов с именем name.
         '''
         toplvl = QtGui.QTreeWidgetItem()
-        toplvl.setText(0, '%d' % self.num)
+        toplvl.setText(0, name)
         self.tProject.addTopLevelItem(toplvl)
         self.num += 1
         for i in range(10):
@@ -251,16 +259,17 @@ class MyFrame(QtGui.QMainWindow):
         
             Создание действий
         '''
-        # задаем путь к иконкам
-        folder_icons = 'icons/MustHave/'
+        # задаем путь к иконкам хранящимся в resources_pc.py (resources.qrc)
+        folder_icons = ':icons/MustHave/'
         
         # создаем действие "Закрытие формы"
         # задаем горячую кнопку
         # и свзязываем действие с сигналом
         icon = folder_icons + 'Log Out_24x24.png'
         self.aExit = QtGui.QAction(QtGui.QIcon(icon), u'Выход', self)
-        self.aExit.setShortcut('Ctrl+Q')
+        self.aExit.setShortcut("Ctrl+Q")
         self.aExit.triggered.connect(self.close)
+
 #        self.connect(self.aExit, QtCore.SIGNAL('triggered()'), self.close)
         
         # создаем действие "Инкремент тика"
@@ -288,14 +297,17 @@ class MyFrame(QtGui.QMainWindow):
         # действие "Создать новый
         icon = folder_icons + 'new_24x24.png'
         self.aNewFile = QtGui.QAction(QtGui.QIcon(icon), u'Новый...', self)
+        self.aNewFile.setShortcut("Ctrl+N")
         
         # создаем действие "Открыть"
         icon = folder_icons + 'open_24x24.png'
         self.aOpenFile = QtGui.QAction(QtGui.QIcon(icon), u'Открыть...', self)
+        self.aOpenFile.setShortcut("Ctrl+O")
         
         # создаем действие "Сохранить"
         icon = folder_icons + 'save_24x24.png'
         self.aSaveFile = QtGui.QAction(QtGui.QIcon(icon), u'Сохранить', self)
+        self.aSaveFile.setShortcut("Ctrl+S")
         
         # создаем действие "Сохранить как..."
         self.aSaveAsFile = QtGui.QAction(u'Сохранить как...', self)
@@ -305,6 +317,7 @@ class MyFrame(QtGui.QMainWindow):
         self.aSetupPort = \
             QtGui.QAction(QtGui.QIcon(icon), u'Настройки порта', self)
         self.aSetupPort.triggered.connect(self.evShowSetupPort)
+        self.aSetupPort.setShortcut("Alt+S")
               
         # создаем действие "Связь" , открыть порт
         # создаем действие "Стоп", закрыть порт
@@ -352,7 +365,7 @@ class MyFrame(QtGui.QMainWindow):
         self.barFile.addAction(self.aExit)
         
         #     Настройка
-        self.barSetup = self.myBar.addMenu(u'Настройка')
+        self.barSetup = self.myBar.addMenu(u'&Настройка')
         self.barSetup.addAction(self.aSetupPort)
         self.barSetup.addAction(self.aPrev)
         self.barSetup.addAction(self.aNext)
@@ -376,12 +389,12 @@ class MyFrame(QtGui.QMainWindow):
         
         # дерево проекта
         self.tProject = QtGui.QTreeWidget()
+        self.tProject.setFont(QtGui.QFont('oldEnglish', 10))
         self.tProject.setMinimumWidth(120)
-        self.tProject.setHeaderLabel(u'Усилители')
+        self.tProject.setHeaderLabel(u'Платы')
 #        self.tProject.setHeaderHidden(True)  # скрыть заголовок
         self.tProject.itemClicked.connect(self.evPressTree)
-        self.fillProjectTree()
-        self.fillProjectTree()
+        self.fillProjectTree(u'МкУМ')
          
         # таблица параметров
         self.createParamList()
@@ -391,17 +404,25 @@ class MyFrame(QtGui.QMainWindow):
         self.myTabWidget = QtGui.QTabWidget()
         self.tabAdjust1 = tab_adjust.TabAdjust()
         self.tabAdjust2 = tab_adjust.TabAdjust()
-        self.myTabWidget.addTab(self.tabAdjust1, u"Вкладка 1")
-        self.myTabWidget.addTab(self.tabAdjust2, u"Вкладка 2")
+        self.myTabWidget.addTab(self.tabAdjust1, u"Калибровка измерителя")
+        self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
        
         gridTab1 = QtGui.QGridLayout()
         gridTab1.addWidget(self.lParam, 0, 0, 3, 2)
         gridTab1.addWidget(self.myTabWidget, 3, 0, 2, 2)
+        
+        # вертикальная компановка
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(self.tProject)
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QPushButton(u'Добавить'))
+        hbox.addWidget(QtGui.QPushButton(u'Удалить'))
+        vbox.addLayout(hbox)
              
         # горизонтальная компановка
         hbox = QtGui.QHBoxLayout()
 #        hbox.addStretch()
-        hbox.addWidget(self.tProject)
+        hbox.addLayout(vbox)
         hbox.addLayout(gridTab1)
 #        hbox.addWidget(self.group)
         

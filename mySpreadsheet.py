@@ -6,7 +6,9 @@ Created on 28.12.2012
 '''
 import sys
 from PyQt4 import QtGui
-from PyQt4 import QtCore
+# from PyQt4 import QtCore
+from PyQt4.QtCore import Qt
+# from PyQt4 import Qt
 
 
 class articleValidate(QtGui.QItemDelegate):
@@ -27,17 +29,19 @@ class articleValidate(QtGui.QItemDelegate):
         print 'haba haba'
         
     def setEditTriggers(self):
+        print 'ggg'
         pass
 
 
 class MySpreadsheet(QtGui.QTableWidget):
-    def __init__(self, row=4, column=3, size=QtCore.QSize(100, 100),
-                 parent=None):
+    def __init__(self, row=4, column=3, parent=None):
         QtGui.QTableWidget.__init__(self, parent)
         
         # добавим нужное кол-во элементов
         self.setRowCount(row)
         self.setColumnCount(column)
+        
+#        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         
         # ѕример использовани€ своего делегата
 #        myDeligate = articleValidate()
@@ -53,15 +57,19 @@ class MySpreadsheet(QtGui.QTableWidget):
         for i in range(row):
             for j in range(column):
                 item = QtGui.QTableWidgetItem("R%d C%d" % (i, j))
-                item.setTextAlignment(QtCore.Qt.AlignCenter)
+                item.setTextAlignment(Qt.AlignCenter)
                 if j != 0:
                     # дл€ выбора/редактировани€ доступна только 0-а€ колонка
 #                    item.setFlags(QtCore.Qt.ItemIsSelectable)
                     # пример установки флагов
-#                   flag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsSelectable |
-#                                              QtCore.Qt.ItemIsEnabled |
-#                                              QtCore.Qt.ItemIsEditable)
-                    item.setFlags(QtCore.Qt.ItemFlags())
+                    # Qt.ItemIsSelectable
+                    # Qt.ItemIsEnabled
+                    # Qt.ItemIsEditable
+                    flag = Qt.ItemFlags()
+                else:
+                    flag = Qt.ItemFlags(Qt.ItemIsEnabled)
+
+                item.setFlags(flag)
                 self.setItem(i, j, item)
         
         self.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem())
@@ -69,28 +77,46 @@ class MySpreadsheet(QtGui.QTableWidget):
         self.setHorizontalHeaderItem(2, QtGui.QTableWidgetItem())
         
         # запретим изменение размеров столбцов и колонок
-        self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
-        self.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        # self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        # self.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        
+        # подгонка ширины колонок / строк под размеры таблицы
+        self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
+        self.verticalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
         
         # установим ширину колонов в зависимости от размеров окна
-        width_column = size.width() - self.verticalHeader().width()
-        width_column = (width_column - 2) / column
-        for i in range(column):
-            self.setColumnWidth(i, width_column)
+#        width_column = size.width() - self.verticalHeader().width()
+#        width_column = (width_column - 2) / column
+#        for i in range(column):
+#            self.setColumnWidth(i, width_column)
         
         # установим высоту колонок в зависимости от размеров окна
-        height_row = size.height() - self.horizontalHeader().height()
-        height_row = (height_row - 2) / row
-        for i in range(row):
-            self.setRowHeight(i, height_row)
+#        height_row = size.height() - self.horizontalHeader().height()
+#        height_row = (height_row - 2) / row
+#        for i in range(row):
+#            self.setRowHeight(i, height_row)
         
         # установим запрет на по€вление скролл-баров
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
         # запретим изменение размеров таблицы
-        self.setFixedSize(size)
-                
+#        self.setFixedSize(size)
+
+    # созданеи контекстного меню
+    def contextMenuEvent(self, event):
+        menu = QtGui.QMenu(self)
+        
+        action1 = QtGui.QAction(u"”далить строку", self)
+        action1.triggered.connect(self.delRow)
+        
+        action2 = QtGui.QAction(u"ќчистить все", self)
+        action2.triggered.connect(self.clearTable)
+        
+        menu.addAction(action1)
+        menu.addAction(action2)
+        menu.exec_(event.globalPos())
+        
     def focusOutEvent(self, event):
         ''' (self, QtGui.QFocusEvent) -> None
         
@@ -98,10 +124,36 @@ class MySpreadsheet(QtGui.QTableWidget):
         '''
         self.clearSelection()
 
+    def clearTable(self):
+        ''' (self) -> None
+        
+            ќчищаем всю таблицу.
+        '''
+        for i in range(self.rowCount()):
+            for j in range(self.columnCount()):
+                self.item(i, j).setText("")
+                
+    def delRow(self):
+        ''' (self) -> None
+        
+            ”дал€ем текущую строку.
+        '''
+        i = self.currentRow()
+        
+        # сдвинем вышележащие строки вниз
+        for x in range(i, self.rowCount() - 1):
+            for j in range(self.columnCount()):
+                self.item(x, j).setText(self.item(x + 1, j).text())
+        # очистим последнюю строку
+        x = self.rowCount() - 1
+        for j in range(self.columnCount()):
+            self.item(x, j).setText("")
+        
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     
-    my_frame = MySpreadsheet(20, 20, QtCore.QSize(500, 500))
+    my_frame = MySpreadsheet(3, 3)
     my_frame.show()
     
     my_frame.horizontalHeaderItem(0).setText(u"Uвых, ¬")

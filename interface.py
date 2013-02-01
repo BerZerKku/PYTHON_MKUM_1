@@ -11,9 +11,27 @@ import serial
 from PyQt4 import QtCore
 
 
+class ReadThread(QtCore.QThread):
+    def __init__(self, port, parent=None):
+        QtCore.QThread.__init__(self, parent)
+        self.port = port
+        
+    def run(self):
+        while True:
+            s = self.port.readall()
+            print s
+            if len(s) > 0:
+                read = []
+                
+                for c in s:
+                    read.append(c.encode('hex').upper())
+                
+#                self.emit(QtCore.SIGNAL(str))
+
+
 class Interface():
     def __init__(self, port=None, baudrate=19200, bytesize=serial.EIGHTBITS,
-                 parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
+                 parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO,
                  parent=None):
 #        self.aviablePorts = self.scanPorts()
         
@@ -26,10 +44,12 @@ class Interface():
                        'M': 'Mark', 'S': 'Space'}
         self._port = None
         
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.repeatSendData)
+        self.timerTr = QtCore.QTimer()
+        self.timerTr.timeout.connect(self.repeatSendData)
         self.data_temp = ''
-    
+        
+        self.readThread = ReadThread(self._port)
+         
     def __str__(self):
         val = ''
         val += 'port = %s; ' % self.getPortName()
@@ -53,13 +73,18 @@ class Interface():
                                        self._portParity,
                                        self._portStopBits,
                                        timeout=0)
+            self.readThread.start()
           
     def closePort(self):
         ''' (self) -> None
         
             Окончание работы с портом.
         '''
-        self.timer.stop()
+        self.timerTr.stop()
+        
+        self.readThread.terminate()
+        self.readThread.wait(100)
+        
         self._port.close()
         
     def scanPorts(self):
@@ -267,11 +292,11 @@ class Interface():
             # повторения посылок
             if repeat != None:
                 if repeat == 0:
-                    self.timer.stop()
+                    self.timerTr.stop()
                 else:
-                    self.timer.stop()
-                    self.timer.setInterval(repeat)
-                    self.timer.start()
+                    self.timerTr.stop()
+                    self.timerTr.setInterval(repeat)
+                    self.timerTr.start()
                     
             return self._port.write(tmp)
 #        except:
@@ -289,8 +314,20 @@ class Interface():
         
             Остановка отправки повторных сообщений
         '''
-        self.timer.stop()
+        self.timerTr.stop()
+    
+    def _readData(self):
+        ''' (self) -> None
+        
+            Производится считывание данных из порта
+            
+        '''
+        pass
+            
     
 if __name__ == '__main__':
     print "Создан элемент port, выбран 'COM1'"
     port = Interface('COM1')
+    port.openPort()
+#    port.closePort()
+#    print "Пор закрыт."
