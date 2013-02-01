@@ -1,0 +1,15 @@
+<RCC>
+  <qresource prefix="/">
+    <file>icons/MustHave/Log Out_24x24.png</file>
+    <file>icons/MustHave/check_24x24.png</file>
+    <file>icons/MustHave/cancel_24x24.png</file>
+    <file>icons/MustHave/Next_24x24.png</file>
+    <file>icons/MustHave/Previous_24x24.png</file>
+    <file>icons/MustHave/help_24x24.png</file>
+    <file>icons/MustHave/information_24x24.png</file>
+    <file>icons/MustHave/new_24x24.png</file>
+    <file>icons/MustHave/settings_24x24.png</file>
+    <file>icons/MustHave/open_24x24.png</file>
+    <file>icons/MustHave/save_24x24.png</file>
+  </qresource>
+</RCC>
