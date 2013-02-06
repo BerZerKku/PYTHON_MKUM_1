@@ -388,45 +388,45 @@ class MyFrame(QtGui.QMainWindow):
         self.setCentralWidget(self.mainWidget)
         
         # дерево проекта
-        self.tProject = QtGui.QTreeWidget()
-        self.tProject.setFont(QtGui.QFont('oldEnglish', 10))
-        self.tProject.setMinimumWidth(120)
-        self.tProject.setHeaderLabel(u'Платы')
+#        self.tProject = QtGui.QTreeWidget()
+#        self.tProject.setFont(QtGui.QFont('oldEnglish', 10))
+#        self.tProject.setMinimumWidth(120)
+#        self.tProject.setHeaderLabel(u'Платы')
 #        self.tProject.setHeaderHidden(True)  # скрыть заголовок
-        self.tProject.itemClicked.connect(self.evPressTree)
-        self.fillProjectTree(u'МкУМ')
+#        self.tProject.itemClicked.connect(self.evPressTree)
+#        self.fillProjectTree(u'МкУМ')
          
         # таблица параметров
-        self.createParamList()
+#        self.createParamList()
         
         # панель с вкладками
         # "PyQT.Создание оконных приложений на Python 3" стр. 155
         self.myTabWidget = QtGui.QTabWidget()
         self.tabAdjust1 = tab_adjust.TabAdjust()
-        self.tabAdjust2 = tab_adjust.TabAdjust()
+#        self.tabAdjust2 = tab_adjust.TabAdjust()
         self.myTabWidget.addTab(self.tabAdjust1, u"Калибровка измерителя")
-        self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
+#        self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
        
         gridTab1 = QtGui.QGridLayout()
-        gridTab1.addWidget(self.lParam, 0, 0, 3, 2)
+#        gridTab1.addWidget(self.lParam, 0, 0, 3, 2)
         gridTab1.addWidget(self.myTabWidget, 3, 0, 2, 2)
         
         # вертикальная компановка
         vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.tProject)
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QPushButton(u'Добавить'))
-        hbox.addWidget(QtGui.QPushButton(u'Удалить'))
-        vbox.addLayout(hbox)
+#        vbox.addWidget(self.tProject)
+#        hbox = QtGui.QHBoxLayout()
+#        hbox.addWidget(QtGui.QPushButton(u'Добавить'))
+#        hbox.addWidget(QtGui.QPushButton(u'Удалить'))
+#        vbox.addLayout(hbox)
              
         # горизонтальная компановка
-        hbox = QtGui.QHBoxLayout()
+#        hbox = QtGui.QHBoxLayout()
 #        hbox.addStretch()
-        hbox.addLayout(vbox)
-        hbox.addLayout(gridTab1)
+#        hbox.addLayout(vbox)
+        vbox.addLayout(gridTab1)
 #        hbox.addWidget(self.group)
         
-        self.mainWidget.setLayout(hbox)
+        self.mainWidget.setLayout(vbox)
         
         # группа объектов
         # "PyQT.Создание оконных приложений на Python 3" стр. 152

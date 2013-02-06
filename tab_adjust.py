@@ -11,9 +11,9 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 # from PyQt4 import QtCore
 
-import pylab
-from matplotlib.backends.backend_qt4agg import \
-    FigureCanvasQTAgg as FigureCanvas
+# import pylab
+# from matplotlib.backends.backend_qt4agg import \
+#    FigureCanvasQTAgg as FigureCanvas
 # from matplotlib.backends.backend_qt4agg import \
 #    NavigationToolbar2QTAgg as NavigationToolbar
 # from matplotlib.figure import Figure
@@ -31,9 +31,13 @@ class TabAdjust(QtGui.QWidget):
         self.adjTable.horizontalHeaderItem(0).setText(u"Uвых, В")
         self.adjTable.horizontalHeaderItem(1).setText(u"Uацп")
         self.adjTable.horizontalHeaderItem(2).setText(u"Iацп")
+#        self.adjTable.clearTable()
         
         self.pAdd = QtGui.QPushButton(u'Добавить')
-        self.pDel = QtGui.QPushButton(u'Удалить')
+        self.pAdd.setDisabled(True)
+        self.pAdd.clicked.connect(self.addPointToTable)
+        
+#        self.pDel = QtGui.QPushButton(u'Удалить')
         
         # для всех LineEdit отключим контекстное меню
         # .setContextMenuPolicy(Qt.NoContextMenu)
@@ -44,69 +48,204 @@ class TabAdjust(QtGui.QWidget):
         self.entValU.setValidator(QtGui.QIntValidator(1, 100, self))
         self.entValU.clear()  # очистка текста
         self.entValU.setContextMenuPolicy(Qt.NoContextMenu)
-        
+        self.entValU.textChanged.connect(self.valUChange)
+      
         self.readValU = QtGui.QLineEdit(u'Нет данных')
         self.readValU.setDisabled(True)
         self.readValU.setContextMenuPolicy(Qt.NoContextMenu)
+        self.checkValU = QtGui.QCheckBox()
+        self.checkValU.setChecked(True)
+        self.checkValU.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValI1 = QtGui.QLineEdit(u'Нет данных')
         self.readValI1.setDisabled(True)
         self.readValI1.setContextMenuPolicy(Qt.NoContextMenu)
+        self.checkValI1 = QtGui.QCheckBox()
+        self.checkValI1.setChecked(True)
+        self.checkValI1.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValI2 = QtGui.QLineEdit(u'Нет данных')
         self.readValI2.setDisabled(True)
         self.readValI2.setContextMenuPolicy(Qt.NoContextMenu)
+        self.checkValI2 = QtGui.QCheckBox()
+        self.checkValI2.setChecked(False)
+        self.checkValI2.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValU48 = QtGui.QLineEdit(u'Нет данных')
         self.readValU48.setDisabled(True)
         self.readValU48.setContextMenuPolicy(Qt.NoContextMenu)
+        self.checkValU48 = QtGui.QCheckBox()
+        self.checkValU48.setChecked(False)
+        self.checkValU48.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValUwork = QtGui.QLineEdit(u'Нет данных')
         self.readValUwork.setDisabled(True)
         self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
+        self.checkValUwork = QtGui.QCheckBox()
+        self.checkValUwork.setChecked(False)
+        self.checkValUwork.setToolTip(u"Вкл./выкл. калибровки параметра.")
+        
+        self.pSave = QtGui.QPushButton(u'Сохранить')
+        self.pSave.setDisabled(True)
+        
+        self.pSaveAs = QtGui.QPushButton(u'Сохранить как...')
+        self.pSaveAs.setDisabled(True)
         
         # создаем область для графика
-        self.figure = pylab.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.setFixedSize(400, 400)
-        self.axes = self.figure.add_subplot(1, 1, 1)
+#        self.figure = pylab.figure()
+#        self.canvas = FigureCanvas(self.figure)
+#        self.canvas.setFixedSize(400, 400)
+#        self.axes = self.figure.add_subplot(1, 1, 1)
 #        self.toolbar = NavigationToolbar(self.canvas, self.canvas)
-        self.axes.set_title('Haba-haba')
+#        self.axes.set_title('Haba-haba')
         
-        grid.addWidget(self.adjTable, 0, 0, 1, 2)
+        # установка таблицы в сетку
+        grid.addWidget(self.adjTable, 0, 0, 7, 2)
+        
+        grid.addWidget(self.pSave, 7, 0)
+        grid.addWidget(self.pSaveAs, 7, 1)
+        
+        # начальные положения для полей данных
+        col = 2
+        row = 0
         
         # входное напряжение
-        grid.addWidget(QtGui.QLabel(u'Напряжение выхода, В'), 1, 0, 1, 2,
+        grid.addWidget(QtGui.QLabel(u'Напряжение выхода, В'), row, col, 1, 2,
                        Qt.AlignCenter)
-        grid.addWidget(self.entValU, 2, 1)
-        grid.addWidget(self.pAdd, 2, 0)
+        row += 1
+        grid.addWidget(self.entValU, row, col)
+        grid.addWidget(self.pAdd, row, col + 1)
         
         # показания АЦП
-        grid.addWidget(QtGui.QLabel(u'Показания АЦП'), 3, 0, 1, 2,
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Показания АЦП'), row, col, 1, 2,
                        Qt.AlignCenter)
-
-        grid.addWidget(QtGui.QLabel(u'Напряжение выхода'), 4, 0,
-                       alignment=Qt.AlignRight)
-        grid.addWidget(self.readValU, 4, 1)
         
-        grid.addWidget(QtGui.QLabel(u'Ток выхода 1'), 5, 0,
+        #     напряжение выхода
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Напряжение выхода'), row, col,
                        alignment=Qt.AlignRight)
-        grid.addWidget(self.readValI1, 5, 1)
+        grid.addWidget(self.readValU, row, col + 1)
+        grid.addWidget(self.checkValU, row, col + 2)
         
-        grid.addWidget(QtGui.QLabel(u'Ток выхода 2'), 6, 0,
+        #     ток выхода 1
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Ток выхода 1'), row, col,
                        alignment=Qt.AlignRight)
-        grid.addWidget(self.readValI2, 6, 1)
+        grid.addWidget(self.readValI1, row, col + 1)
+        grid.addWidget(self.checkValI1, row, col + 2)
         
-        grid.addWidget(QtGui.QLabel(u'Напряжение питания'), 7, 0,
+        #     ток выхода 2
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Ток выхода 2'), row, col,
                        alignment=Qt.AlignRight)
-        grid.addWidget(self.readValU48, 7, 1)
+        grid.addWidget(self.readValI2, row, col + 1)
+        grid.addWidget(self.checkValI2, row, col + 2)
         
-        grid.addWidget(QtGui.QLabel(u'Напряжение раб.т'), 8, 0,
+        #     напряжение питания
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Напряжение питания'), row, col,
                        alignment=Qt.AlignRight)
-        grid.addWidget(self.readValUwork, 8, 1)
+        grid.addWidget(self.readValU48, row, col + 1)
+        grid.addWidget(self.checkValU48, row, col + 2)
+        
+        #     напряжение в рабочей точке
+        row += 1
+        grid.addWidget(QtGui.QLabel(u'Напряжение раб.т'), row, col,
+                       alignment=Qt.AlignRight)
+        grid.addWidget(self.readValUwork, row, col + 1)
+        grid.addWidget(self.checkValUwork, row, col + 2)
         
         hbox.addLayout(grid)
-        hbox.addWidget(self.canvas)
+#        hbox.addWidget(self.canvas)
+    
+    def addPointToTable(self):
+        ''' (self) -> None [SLOT]
+            
+            Добавление новой записи в таблицу данных
+        '''
+        
+        # флаг состояния
+        error = False
+        
+        # считаем и проверим имеющиеся данные
+        # если по окончанию проверки флаг error будет True
+        # добавление строки не произойдет
+        valUout = self.entValU.text()
+        
+        valU = 0
+        if self.checkValU.isChecked():
+            flag, valU = self.checkValue(self.readValU.text())
+            if not flag:
+                print 'Ошибка значения АЦП "Напряжени выхода"'
+                error = True
+        
+        valI1 = 0
+        if self.checkValI1.isChecked():
+            flag, valI1 = self.checkValue(self.readValI1.text())
+            if not flag:
+                print 'Ошибка значения АЦП "Ток выхода 1"'
+                error = True
+        
+        valI2 = 0
+        if self.checkValI2.isChecked():
+            flag, valI2 = self.checkValue(self.readValI2.text())
+            if not flag:
+                print 'Ошибка значения АЦП "Ток выхода 2"'
+                error = True
+        
+        valU48 = 0
+        if self.checkValU48.isChecked():
+            flag, valU48 = self.checkValue(self.readValU48.text())
+            if not flag:
+                print 'Ошибка значения АЦП "Напряжение питания"'
+                error = True
+        
+        valUwork = 0
+        if self.checkValUwork.isChecked():
+            flag, valUwork = self.checkValue(self.readValUwork.text())
+            if not flag:
+                print 'Ошибка значения АЦП "Напряжение рабочей точки"'
+                error = True
+        
+        # если была ошибка
+        if error:
+            return
+        
+        data = [valUout, valU, valI1]
+        self.adjTable.addRowData(data)
+                   
+    def valUChange(self, val):
+        ''' (self, str) -> None [SLOT]
+        
+            Реакция на ввод/изменение напряжения. При отсутствии текста в поле
+            блокируется возможность добавления новой записи.
+        '''
+        if len(val) > 0:
+            self.pAdd.setEnabled(True)
+        else:
+            self.pAdd.setDisabled(True)
+
+    def checkValue(self, text):
+        ''' (self, str) -> bool, int
+        
+            Входная строка преобразуется в число val. Если полученное значение
+            выходит за диапазон 0..1023, возвращается False, val.
+            Иначе True, val.
+        '''
+        
+        sost = False
+        
+        try:
+            val = int(text)
+        
+            if val >= 0 and val <= 1023:
+                sost = True
+        except:
+            print self, 'Ошибка преобразования строки в int'
+            val = 0
+        
+        return sost, val
     
     
 if __name__ == '__main__':
@@ -114,5 +253,8 @@ if __name__ == '__main__':
     
     my_frame = TabAdjust()
     my_frame.show()
+    
+    # установим вид отображения
+    QtGui.QApplication.setStyle('Cleanlooks')
     
     app.exec_()

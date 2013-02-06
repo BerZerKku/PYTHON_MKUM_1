@@ -13,6 +13,7 @@ from PyQt4.QtCore import Qt
 
 class articleValidate(QtGui.QItemDelegate):
     '''    ѕример реализации делегата
+        Ќа данный момент не используетс€.
     
     '''
     def __init__(self, parent=None):
@@ -58,17 +59,19 @@ class MySpreadsheet(QtGui.QTableWidget):
             for j in range(column):
                 item = QtGui.QTableWidgetItem("R%d C%d" % (i, j))
                 item.setTextAlignment(Qt.AlignCenter)
-                if j != 0:
-                    # дл€ выбора/редактировани€ доступна только 0-а€ колонка
-#                    item.setFlags(QtCore.Qt.ItemIsSelectable)
-                    # пример установки флагов
-                    # Qt.ItemIsSelectable
-                    # Qt.ItemIsEnabled
-                    # Qt.ItemIsEditable
-                    flag = Qt.ItemFlags()
-                else:
-                    flag = Qt.ItemFlags(Qt.ItemIsEnabled)
-
+#                if j != 0:
+#                    # дл€ выбора/редактировани€ доступна только 0-а€ колонка
+# #                    item.setFlags(QtCore.Qt.ItemIsSelectable)
+#                    # пример установки флагов
+#                    # Qt.ItemIsSelectable
+#                    # Qt.ItemIsEnabled
+#                    # Qt.ItemIsEditable
+#                    flag = Qt.ItemFlags()
+#                else:
+#                    flag = Qt.ItemFlags(Qt.ItemIsEnabled)
+                 
+                # €чейка доступна дл€ выбора
+                flag = Qt.ItemFlags(Qt.ItemIsEnabled)
                 item.setFlags(flag)
                 self.setItem(i, j, item)
         
@@ -103,8 +106,11 @@ class MySpreadsheet(QtGui.QTableWidget):
         # запретим изменение размеров таблицы
 #        self.setFixedSize(size)
 
-    # созданеи контекстного меню
     def contextMenuEvent(self, event):
+        ''' (self, event) -> None
+            
+            —оздание контекстного меню, при нажатии RMB на таблице
+        '''
         menu = QtGui.QMenu(self)
         
         action1 = QtGui.QAction(u"”далить строку", self)
@@ -132,6 +138,8 @@ class MySpreadsheet(QtGui.QTableWidget):
         for i in range(self.rowCount()):
             for j in range(self.columnCount()):
                 self.item(i, j).setText("")
+        
+        self._numFilledRows = 0
                 
     def delRow(self):
         ''' (self) -> None
@@ -139,6 +147,11 @@ class MySpreadsheet(QtGui.QTableWidget):
             ”дал€ем текущую строку.
         '''
         i = self.currentRow()
+        
+        # если это была заполненна€ строка , удалим ее
+        # иначе проигнорируем
+        if len(self.item(i, 0).text()) == 0:
+            return
         
         # сдвинем вышележащие строки вниз
         for x in range(i, self.rowCount() - 1):
@@ -148,6 +161,66 @@ class MySpreadsheet(QtGui.QTableWidget):
         x = self.rowCount() - 1
         for j in range(self.columnCount()):
             self.item(x, j).setText("")
+    
+    def addRowData(self, data):
+        ''' (self, list) -> None
+            
+            ƒобавл€ет строку данных в таблицу и одновременно сортирует ее.
+             ол-во элементов в data должно соответствовать кол-ву столбцов.
+            
+            ѕри заполнении таблицы устанавливаетс€ флаг.
+        '''
+        
+        # возврат, если таблица заполнена
+        if self.isFull():
+            return
+
+        # добавим строку в конец
+        row = self.numFilledRows() - 1
+        for col in range(self.columnCount()):
+            self.item(row, col).setText(str(data[col]))
+            
+        # отсортируем данные
+        self.sortRows()
+        
+    def isFull(self):
+        ''' (self) -> bool
+        
+            ¬озвращает True, в случае полностью зааполненной таблицы.
+        '''
+        
+        # нам достаточно проверить последнюю строку
+        return len(self.item(self.rowCount() - 1, 0).text()) != 0
+    
+    def sortRows(self):
+        ''' (self) -> None
+        
+            —ортировка данным в таблице по возрастанию в первой колонке.
+        '''
+        print "—ортировка"
+        self.sortByColumn(0)
+        self.so
+#        # нахождение наименьшего индекса пустой строки
+#        numRows = self.numFilledRows()
+#        for i in range(numRows):
+#            max = int(self.item(i, 0).text())
+#            for j in range(1, numRows):
+#                val = 
+            
+            
+    def numFilledRows(self):
+        ''' (self) -> int
+        
+            ¬озвращает кол-во заполненых строк в таблице.
+        '''
+        num = self.rowCount() - 1
+        for i in range(self.columnCount()):
+            if len(self.item(i, 0).text()) == 0:
+                num = i + 1
+        
+        return num
+        
+        
         
 
 if __name__ == '__main__':
