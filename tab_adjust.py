@@ -7,7 +7,7 @@ Created on 20.12.2012
 
 import sys
 from PyQt4 import QtGui
-# from PyQt4 import QtCore
+from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 # from PyQt4 import QtCore
 
@@ -31,7 +31,9 @@ class TabAdjust(QtGui.QWidget):
         self.adjTable.horizontalHeaderItem(0).setText(u"Uвых, В")
         self.adjTable.horizontalHeaderItem(1).setText(u"Uацп")
         self.adjTable.horizontalHeaderItem(2).setText(u"Iацп")
-#        self.adjTable.clearTable()
+        self.adjTable.clearTable()
+        self.connect(self.adjTable, QtCore.SIGNAL('changeData(QString)'),
+                     self.valUChange)
         
         self.pAdd = QtGui.QPushButton(u'Добавить')
         self.pAdd.setDisabled(True)
@@ -47,45 +49,47 @@ class TabAdjust(QtGui.QWidget):
         self.entValU = QtGui.QLineEdit(u'Uвых')
         self.entValU.setValidator(QtGui.QIntValidator(1, 100, self))
         self.entValU.clear()  # очистка текста
+        #    уберем контекстное меню, т.к. могут быть проблемы с 'Undo'
         self.entValU.setContextMenuPolicy(Qt.NoContextMenu)
         self.entValU.textChanged.connect(self.valUChange)
-      
+          
         self.readValU = QtGui.QLineEdit(u'Нет данных')
         self.readValU.setDisabled(True)
-        self.readValU.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.readValU.setContextMenuPolicy(Qt.NoContextMenu)
         self.checkValU = QtGui.QCheckBox()
         self.checkValU.setChecked(True)
         self.checkValU.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValI1 = QtGui.QLineEdit(u'Нет данных')
         self.readValI1.setDisabled(True)
-        self.readValI1.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.readValI1.setContextMenuPolicy(Qt.NoContextMenu)
         self.checkValI1 = QtGui.QCheckBox()
         self.checkValI1.setChecked(True)
         self.checkValI1.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValI2 = QtGui.QLineEdit(u'Нет данных')
         self.readValI2.setDisabled(True)
-        self.readValI2.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.readValI2.setContextMenuPolicy(Qt.NoContextMenu)
         self.checkValI2 = QtGui.QCheckBox()
         self.checkValI2.setChecked(False)
         self.checkValI2.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValU48 = QtGui.QLineEdit(u'Нет данных')
         self.readValU48.setDisabled(True)
-        self.readValU48.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.readValU48.setContextMenuPolicy(Qt.NoContextMenu)
         self.checkValU48 = QtGui.QCheckBox()
         self.checkValU48.setChecked(False)
         self.checkValU48.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.readValUwork = QtGui.QLineEdit(u'Нет данных')
         self.readValUwork.setDisabled(True)
-        self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
         self.checkValUwork = QtGui.QCheckBox()
         self.checkValUwork.setChecked(False)
         self.checkValUwork.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.pSave = QtGui.QPushButton(u'Сохранить')
+        self.pSave.clicked.connect(self.saveFileHEX)
         self.pSave.setDisabled(True)
         
         self.pSaveAs = QtGui.QPushButton(u'Сохранить как...')
@@ -158,7 +162,12 @@ class TabAdjust(QtGui.QWidget):
         
         hbox.addLayout(grid)
 #        hbox.addWidget(self.canvas)
-    
+        
+        # каждые 200мс будет проверять возможность ввода новго значения
+#        self.timer = QtCore.QTimer()
+#        self.timer.start(200)
+#        self.timer.timeout.connect(self.valUChange)
+        
     def addPointToTable(self):
         ''' (self) -> None [SLOT]
             
@@ -172,60 +181,79 @@ class TabAdjust(QtGui.QWidget):
         # если по окончанию проверки флаг error будет True
         # добавление строки не произойдет
         valUout = self.entValU.text()
+        self.entValU.setText("")
         
         valU = 0
         if self.checkValU.isChecked():
             flag, valU = self.checkValue(self.readValU.text())
             if not flag:
-                print 'Ошибка значения АЦП "Напряжени выхода"'
+                print u'Ошибка значения АЦП "Напряжени выхода"'
                 error = True
         
         valI1 = 0
         if self.checkValI1.isChecked():
             flag, valI1 = self.checkValue(self.readValI1.text())
             if not flag:
-                print 'Ошибка значения АЦП "Ток выхода 1"'
+                print u'Ошибка значения АЦП "Ток выхода 1"'
                 error = True
         
         valI2 = 0
         if self.checkValI2.isChecked():
             flag, valI2 = self.checkValue(self.readValI2.text())
             if not flag:
-                print 'Ошибка значения АЦП "Ток выхода 2"'
+                print u'Ошибка значения АЦП "Ток выхода 2"'
                 error = True
         
         valU48 = 0
         if self.checkValU48.isChecked():
             flag, valU48 = self.checkValue(self.readValU48.text())
             if not flag:
-                print 'Ошибка значения АЦП "Напряжение питания"'
+                print u'Ошибка значения АЦП "Напряжение питания"'
                 error = True
         
         valUwork = 0
         if self.checkValUwork.isChecked():
             flag, valUwork = self.checkValue(self.readValUwork.text())
             if not flag:
-                print 'Ошибка значения АЦП "Напряжение рабочей точки"'
+                print u'Ошибка значения АЦП "Напряжение рабочей точки"'
                 error = True
         
         # если была ошибка
         if error:
             return
         
+        # добавим строку, и очистим поле ввода
         data = [valUout, valU, valI1]
         self.adjTable.addRowData(data)
+        
+        if self.adjTable.isFull():
+            self.pAdd.setDisabled(True)
                    
-    def valUChange(self, val):
-        ''' (self, str) -> None [SLOT]
+    def valUChange(self, val=""):
+        ''' (self, str) -> None
         
             Реакция на ввод/изменение напряжения. При отсутствии текста в поле
-            блокируется возможность добавления новой записи.
+            блокируется возможность добавления новой записи. При заполненной
+            таблице, появляется возможность сохранить прошивку.
         '''
-        if len(val) > 0:
-            self.pAdd.setEnabled(True)
-        else:
-            self.pAdd.setDisabled(True)
 
+        val = self.entValU.text()
+        if self.adjTable.isFull():
+            # таблица полная, запретим возможность добавления данных
+            # и разрешим сохранение прошивки
+            self.pAdd.setDisabled(True)
+            self.pSave.setEnabled(True)
+            self.pSaveAs.setEnabled(True)
+        else:
+            # таблица не полная, запретим возможность сохранения прошивики
+            # и проверим данные в поле ввода напряжения
+            self.pSave.setDisabled(True)
+            self.pSaveAs.setDisabled(True)
+            if len(val) == 0:
+                self.pAdd.setDisabled(True)
+            else:
+                self.pAdd.setEnabled(True)
+            
     def checkValue(self, text):
         ''' (self, str) -> bool, int
         
@@ -242,11 +270,90 @@ class TabAdjust(QtGui.QWidget):
             if val >= 0 and val <= 1023:
                 sost = True
         except:
-            print self, 'Ошибка преобразования строки в int'
+            print self, u'Ошибка преобразования строки в int'
             val = 0
         
         return sost, val
     
+    def openFileHEX(self):
+        ''' (self) -> str
+        
+            Открытие файла прошивки. Возвращает содержимое файла.
+        '''
+        fileHEX = open('MkUM.hex', 'r')
+        text = fileHEX.read()
+
+        return text
+    
+    def saveFileHEX(self, name):
+        ''' (self, name) -> None
+            
+            Сохраняем файл прошивки с путем/имененм name
+        '''
+        # считаем файл прошивки и разобъем ее на строки
+        try:
+            origHEX = self.openFileHEX()
+            origHEX = origHEX.splitlines()
+        except:
+            print u"Не удалось считать оригинальный файл прошивки."
+            return
+        
+        # поиск начала структуры данных
+        numLine = 0
+        for i in range(len(origHEX)):
+            if "9178" in origHEX[i]:
+                numLine = i
+                print origHEX[i]
+                break
+        else:
+            print u"Ошибка исходного файла прошивки"
+            return
+        
+        # считаем из таблицы значения, и преобразуем их в hex-строку 
+        data = ""
+        for row in range(4):
+            for col in range(2):
+                data += self.intToHex(self.adjTable.item(row, col).text())
+        print data
+        
+        
+        # байты в первой строке
+        # 1      ":" - признак начала строки
+        # 2-3    "xx" - кол-во байт данных в этой строке
+        # 4-7    "xxyy" - адрес 
+        # 8-9    "00" - данные двоичного файлы
+        # 10-13  "9178" - начало массива
+        # 14-21  "aabbccdd" - множитель для напряжения в раб.точке (float)
+        # 22-29  "aabbccdd" - множитель для напряжения питания (float)
+        # 30-33  "aabb" - первое напряжение, младшим байтом вперед (int)
+        # 34-37  "aabb" - первое значение АЦП, младшим байтом вперед (int)
+        # 38-41  "aabb" - второе напряжение, младшим байтом вперед (int)
+        
+        
+        
+        
+    def intToHex(self, val):
+        ''' (self, int) -> str
+        
+            Преобразование int в строку hex. Младшим байтом вперед.
+            
+            >>> .intToHex(5) 
+            '0500'
+            >>> .intToHex(270)
+            '0E01'
+        '''
+        # преобразование int в строку
+        val = '%.4x' % int(val)
+        val = val.upper()
+        # разделение строки на старший и младший "байты"
+        hi = val[:2]
+        low = val[2:]
+        # склейка новой строки, младшим байтом вперед
+        val = low + hi
+        
+        return val
+        
+            
     
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
@@ -254,7 +361,10 @@ if __name__ == '__main__':
     my_frame = TabAdjust()
     my_frame.show()
     
+    # my_frame.saveFileHEX('a')
+    
     # установим вид отображения
     QtGui.QApplication.setStyle('Cleanlooks')
+    
     
     app.exec_()

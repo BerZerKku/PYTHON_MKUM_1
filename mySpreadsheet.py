@@ -6,7 +6,7 @@ Created on 28.12.2012
 '''
 import sys
 from PyQt4 import QtGui
-# from PyQt4 import QtCore
+from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 # from PyQt4 import Qt
 
@@ -32,7 +32,7 @@ class articleValidate(QtGui.QItemDelegate):
     def setEditTriggers(self):
         print 'ggg'
         pass
-
+    
 
 class MySpreadsheet(QtGui.QTableWidget):
     def __init__(self, row=4, column=3, parent=None):
@@ -41,6 +41,9 @@ class MySpreadsheet(QtGui.QTableWidget):
         # добавим нужное кол-во элементов
         self.setRowCount(row)
         self.setColumnCount(column)
+        
+        # сбросим активную €чейку
+        self.setCurrentCell(-1, -1)
         
 #        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         
@@ -111,6 +114,9 @@ class MySpreadsheet(QtGui.QTableWidget):
             
             —оздание контекстного меню, при нажатии RMB на таблице
         '''
+        # запомним текущую строку
+        self._row = self.currentRow()
+        
         menu = QtGui.QMenu(self)
         
         action1 = QtGui.QAction(u"”далить строку", self)
@@ -129,7 +135,16 @@ class MySpreadsheet(QtGui.QTableWidget):
             ѕереопределение событи€ потери фокуса виджетом.
         '''
         self.clearSelection()
+        self.setCurrentCell(-1, -1)
+        self.emit(QtCore.SIGNAL('changeData(QString)'), "")
 
+    def focusInEvent(self, event):
+        ''' (self, QtGui.QFocusEvent) -> None
+        
+            ѕереопределение событи€ установки фокуса на виджет.
+        '''
+#        self.emit(QtCore.SIGNAL('changeData(QString)'), "")
+    
     def clearTable(self):
         ''' (self) -> None
         
@@ -138,47 +153,55 @@ class MySpreadsheet(QtGui.QTableWidget):
         for i in range(self.rowCount()):
             for j in range(self.columnCount()):
                 self.item(i, j).setText("")
-        
-        self._numFilledRows = 0
+                
+        self.emit(QtCore.SIGNAL('changeData(QString)'), "")
                 
     def delRow(self):
         ''' (self) -> None
         
             ”дал€ем текущую строку.
         '''
-        i = self.currentRow()
-        
         # если это была заполненна€ строка , удалим ее
         # иначе проигнорируем
-        if len(self.item(i, 0).text()) == 0:
+        if len(self.item(self._row, 0).text()) == 0:
             return
         
         # сдвинем вышележащие строки вниз
-        for x in range(i, self.rowCount() - 1):
+        for x in range(self._row, self.rowCount() - 1):
             for j in range(self.columnCount()):
                 self.item(x, j).setText(self.item(x + 1, j).text())
+                
         # очистим последнюю строку
         x = self.rowCount() - 1
         for j in range(self.columnCount()):
             self.item(x, j).setText("")
+            
+        self.emit(QtCore.SIGNAL('changeData(QString)'), "")
     
     def addRowData(self, data):
         ''' (self, list) -> None
             
-            ƒобавл€ет строку данных в таблицу и одновременно сортирует ее.
-             ол-во элементов в data должно соответствовать кол-ву столбцов.
-            
-            ѕри заполнении таблицы устанавливаетс€ флаг.
+            ƒобавл€ет строку данных в таблицу и одновременно сортирует ее,
+            по первой колонке.  ол-во элементов в data должно соответствовать
+            кол-ву столбцов. ≈сли такой элемент уже есть (совпадение по первой
+            колонке), осуществл€етс€ замена данных.
         '''
         
         # возврат, если таблица заполнена
         if self.isFull():
             return
-
-        # добавим строку в конец
-        row = self.numFilledRows() - 1
-        for col in range(self.columnCount()):
-            self.item(row, col).setText(str(data[col]))
+        
+        numRows = self.numFilledRows()
+        val = str(data[0])
+        # если подобное значение уже есть в таблице, заменим новыми данными
+        # иначе добавим в конец
+        for row in range(numRows):
+            if val == self.item(row, 0).text():
+                numRows = row
+                break
+        else:
+            for col in range(self.columnCount()):
+                self.item(numRows, col).setText(str(data[col]))
             
         # отсортируем данные
         self.sortRows()
@@ -188,7 +211,6 @@ class MySpreadsheet(QtGui.QTableWidget):
         
             ¬озвращает True, в случае полностью зааполненной таблицы.
         '''
-        
         # нам достаточно проверить последнюю строку
         return len(self.item(self.rowCount() - 1, 0).text()) != 0
     
@@ -196,32 +218,44 @@ class MySpreadsheet(QtGui.QTableWidget):
         ''' (self) -> None
         
             —ортировка данным в таблице по возрастанию в первой колонке.
-        '''
-        print "—ортировка"
-        self.sortByColumn(0)
-        self.so
-#        # нахождение наименьшего индекса пустой строки
-#        numRows = self.numFilledRows()
-#        for i in range(numRows):
-#            max = int(self.item(i, 0).text())
-#            for j in range(1, numRows):
-#                val = 
-            
+        '''   
+        # если кол-во заполненных строк меньше 2 то сортировка не нужна
+        numRows = self.numFilledRows()
+        if numRows <= 1:
+            return
+        
+        numRows -= 1
+        for j in range(numRows):
+            for i in range(numRows - j):
+                val_1 = int(self.item(i, 0).text())
+                val_2 = int(self.item(i + 1, 0).text())
+                if (val_1 > val_2):
+                    self.swapRows(i, i + 1)
             
     def numFilledRows(self):
         ''' (self) -> int
         
             ¬озвращает кол-во заполненых строк в таблице.
         '''
-        num = self.rowCount() - 1
-        for i in range(self.columnCount()):
-            if len(self.item(i, 0).text()) == 0:
-                num = i + 1
+        
+        # просто перебираем строки и провер€ем размер текста в 0-ой колонке
+        num = 0
+        for i in range(self.rowCount()):
+            if len(self.item(i, 0).text()) != 0:
+                num += 1
         
         return num
+    
+    def swapRows(self, row1, row2):
+        ''' (self, int, int) -> None
         
-        
-        
+            ћен€ет местами две строки.
+        '''
+        for col in range(self.columnCount()):
+            tmp = self.item(row1, col).text()
+            self.item(row1, col).setText(self.item(row2, col).text())
+            self.item(row2, col).setText(tmp)
+
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
