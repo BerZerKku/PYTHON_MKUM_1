@@ -93,6 +93,7 @@ class TabAdjust(QtGui.QWidget):
         self.pSave.setDisabled(True)
         
         self.pSaveAs = QtGui.QPushButton(u'Сохранить как...')
+        self.pSaveAs.clicked.connect(self.saveFileAs)
         self.pSaveAs.setDisabled(True)
         
         # создаем область для графика
@@ -280,12 +281,23 @@ class TabAdjust(QtGui.QWidget):
         
             Открытие файла прошивки. Возвращает содержимое файла.
         '''
-        fileHEX = open('MkUM.hex', 'r')
+        fileHEX = open('MkUM.dat', 'r')
         text = fileHEX.read()
+        fileHEX.close()
 
         return text
     
-    def saveFileHEX(self, name):
+    def saveFileAs(self):
+        ''' (self) -> None
+            
+            Сохранение файла с вызовом диалога "Сохранить как...".
+        '''
+        filename = QtGui.QFileDialog.getSaveFileName(self, u"Сохранить как...",
+                                        filter="HEX Files (*.hex)")
+        if len(filename) != 0:
+            self.saveFileHEX(name=filename)
+    
+    def saveFileHEX(self, key='', name='MkUM.hex'):
         ''' (self, name) -> None
             
             Сохраняем файл прошивки с путем/имененм name
@@ -298,29 +310,48 @@ class TabAdjust(QtGui.QWidget):
             print u"Не удалось считать оригинальный файл прошивки."
             return
         
+        # считаем из таблицы значения, и преобразуем их в hex-строку
+        data = ""
+        #    напряжение
+#        print "U(adc)"
+        for row in range(4):
+            tmp = self.intToHex(self.adjTable.item(row, 1).text())
+            tmp += self.intToHex(self.adjTable.item(row, 0).text())
+#            print self.adjTable.item(row, 1).text(),
+#            print self.adjTable.item(row, 0).text(),
+#            print tmp
+            data += tmp
+        #    ток
+#        print "I(adc)"
+        for row in range(4):
+            tmp = self.intToHex(self.adjTable.item(row, 2).text())
+            i = (int(self.adjTable.item(row, 0).text()) * 1000) / 75
+            tmp += self.intToHex(str(i))
+#            print i, self.adjTable.item(row, 2).text(),
+#            print tmp
+            data += tmp
+            
         # поиск начала структуры данных
-        numLine = 0
+        posLine = 0
+        posInData = -1
         for i in range(len(origHEX)):
-            if "9178" in origHEX[i]:
-                numLine = i
-                print origHEX[i]
+            # -9 - служебная информация
+            posInData = origHEX[i].find("9178") - 9
+            if posInData >= 0:
+                # 20 - "9178" + 2 float коэффициентов
+                posInData += 20
+                posLine = i
                 break
         else:
             print u"Ошибка исходного файла прошивки"
             return
-        
-        # считаем из таблицы значения, и преобразуем их в hex-строку 
-        data = ""
-        for row in range(4):
-            for col in range(2):
-                data += self.intToHex(self.adjTable.item(row, col).text())
-        print data
-        
-        
+    
+        # заполним hex-file
+        # в строке данных прервые 9 байт - служебная информация
         # байты в первой строке
         # 1      ":" - признак начала строки
         # 2-3    "xx" - кол-во байт данных в этой строке
-        # 4-7    "xxyy" - адрес 
+        # 4-7    "xxyy" - адрес
         # 8-9    "00" - данные двоичного файлы
         # 10-13  "9178" - начало массива
         # 14-21  "aabbccdd" - множитель для напряжения в раб.точке (float)
@@ -328,16 +359,39 @@ class TabAdjust(QtGui.QWidget):
         # 30-33  "aabb" - первое напряжение, младшим байтом вперед (int)
         # 34-37  "aabb" - первое значение АЦП, младшим байтом вперед (int)
         # 38-41  "aabb" - второе напряжение, младшим байтом вперед (int)
+        while len(data) > 0:
+#            print "old = ", origHEX[posLine]
+            infoInLine = origHEX[posLine][:9]
+            bytesInLine = int(origHEX[posLine][1:3], 16)
+            # dataInLine = origHEX[posLine][9:9 + 2 * bytesInLine]
+            tmp = data[:bytesInLine * 2 - posInData]
+#            print "posInData = %d, bytesInLine = %d" % (posInData,bytesInLine)
+#            print "tmp = %s, len = %d" % (tmp, len(tmp) / 2)
+            data = data.replace(tmp, "")
+            # при необходимости, добъем строку оригинальными данными
+            if len(data) == 0:
+                tmp += origHEX[posLine][bytesInLine * 2 - posInData - 3:-2]
+#            print "data = %s, len = %d" % (data, len(data) / 2)
+            newDataInLine = origHEX[posLine][9:9 + posInData] + tmp
+            origHEX[posLine] = infoInLine + newDataInLine
+            origHEX[posLine] += self.calcCRC(origHEX[posLine])
+#            print "new = ", origHEX[posLine]
+            posLine += 1
+            posInData = 0
         
-        
-        
-        
+        print key
+        print name
+        fSave = open(name, 'w')
+        for x in origHEX:
+            fSave.write(x + '\n')
+        fSave.close()
+  
     def intToHex(self, val):
         ''' (self, int) -> str
         
             Преобразование int в строку hex. Младшим байтом вперед.
             
-            >>> .intToHex(5) 
+            >>> .intToHex(5)
             '0500'
             >>> .intToHex(270)
             '0E01'
@@ -352,19 +406,64 @@ class TabAdjust(QtGui.QWidget):
         val = low + hi
         
         return val
-        
-            
     
+    def calcCRC(self, data):
+        ''' (self, str) -> str
+        
+            Вычисление CRC. Возвращает сумму всех пар чисел по модулю 256 с
+            последующим переводом в дополнительный формат
+            
+            >>>.calcCRC(':1007D00091789A998141E17A543F2B0005005800')
+            'A5'
+            
+            >>>.calcCRC(':1007E0000A00B30014000E011E00270042004F00')
+            '53'
+        '''
+        # при наличии признака начала строки, удалим его
+        tmp = data
+        if tmp[0] == ':':
+            tmp = tmp[1:]
+        
+        # в строке должно быть четное кол-во символов
+        if len(tmp) % 2 != 0:
+            print "calcCRC exception. Data = %s" % data
+            raise
+        
+        crc = 0
+        while len(tmp) > 0:
+            crc += int(tmp[:2], 16)
+            tmp = tmp[2:]
+        
+        crc = "%.2x" % (256 - (crc % 256))
+        return crc.upper()
+        
+    def debugSaveFile(self, data):
+        ''' (self) -> None
+        
+            Заполнение формы для отладки.
+        '''
+        for i in range(self.adjTable.rowCount()):
+            self.adjTable.item(i, 0).setText(str(data[0][i * 2 + 1]))
+            self.adjTable.item(i, 1).setText(str(data[0][i * 2]))
+            self.adjTable.item(i, 2).setText(str(data[1][i * 2]))
+        
+        self.pSave.setEnabled(True)
+        self.pSaveAs.setEnabled(True)
+            
+            
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     
     my_frame = TabAdjust()
     my_frame.show()
     
-    # my_frame.saveFileHEX('a')
+    # data 1
+    # my_frame.debugSaveFile([[43, 5, 88, 10, 179, 20, 270, 30],
+    #                        [39, 66, 79, 133, 159, 266, 242, 400]])
+    my_frame.debugSaveFile([[40, 5, 81, 10, 172, 20, 263, 30],
+                            [45, 66, 90, 133, 187, 266, 283, 400]])
     
     # установим вид отображения
     QtGui.QApplication.setStyle('Cleanlooks')
-    
     
     app.exec_()
