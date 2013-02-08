@@ -11,26 +11,8 @@ import serial
 from PyQt4 import QtCore
 
 
-class ReadThread(QtCore.QThread):
-    def __init__(self, port, parent=None):
-        QtCore.QThread.__init__(self, parent)
-        self.port = port
-        
-    def run(self):
-        while True:
-            s = self.port.readall()
-            print s
-            if len(s) > 0:
-                read = []
-                
-                for c in s:
-                    read.append(c.encode('hex').upper())
-                
-#                self.emit(QtCore.SIGNAL(str))
-
-
 class Interface():
-    def __init__(self, port=None, baudrate=19200, bytesize=serial.EIGHTBITS,
+    def __init__(self, port=None, baudrate=1200, bytesize=serial.EIGHTBITS,
                  parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO,
                  parent=None):
 #        self.aviablePorts = self.scanPorts()
@@ -44,11 +26,17 @@ class Interface():
                        'M': 'Mark', 'S': 'Space'}
         self._port = None
         
-        self.timerTr = QtCore.QTimer()
-        self.timerTr.timeout.connect(self.repeatSendData)
-        self.data_temp = ''
+        # цикл передачи посылки в мс
+        self._repeatTime = 250
+        # счетчик времени
+        self._time = -1
+        # флаг включенного цикла на предеачу
+        self._repeat = False
+        # буфер передаваемой команды
+        self._bufTrData = bytearray()
         
-        self.readThread = ReadThread(self._port)
+#        self.timerTr = QtCore.QTimer()
+#        self.timerTr.timeout.connect(self._timerCycle)
          
     def __str__(self):
         val = ''
@@ -73,7 +61,7 @@ class Interface():
                                        self._portParity,
                                        self._portStopBits,
                                        timeout=0)
-            self.readThread.start()
+#            self.timerTr.startTimer(1)
           
     def closePort(self):
         ''' (self) -> None
@@ -81,9 +69,6 @@ class Interface():
             Окончание работы с портом.
         '''
         self.timerTr.stop()
-        
-        self.readThread.terminate()
-        self.readThread.wait(100)
         
         self._port.close()
         
@@ -172,7 +157,7 @@ class Interface():
         tmp = [str(x) for x in serial.Serial.BYTESIZES]
         return tmp
     
-    def setPortName(self, val):
+    def setPort(self, val):
         ''' (self, str) -> None
         
             Установка порта.
@@ -218,6 +203,22 @@ class Interface():
                 self._portParity = val
         except:
             print self.setParity
+    
+    def setRepeatTime(self, val):
+        ''' (self, int) -> bool
+        
+            Установка периода на передачу посылок 1-60000мс.
+            Возращает Fale в случае ошибки.
+        '''
+        if type(val) != int:
+            return False
+        
+        # макс. ограничение 1 минута
+        if type(val > 60000):
+            return
+        
+        self._repeatTime = val
+        return True
             
     def setStopBits(self, val):
         ''' (self, val) -> None
@@ -267,54 +268,40 @@ class Interface():
         '''
         return str(self._portStopBits)
     
-    def sendData(self, data, repeat=None):
-        ''' (self, str) -> number
+    def sendData(self, data, repeat=False):
+        ''' (self, str) -> None
             
-            Передача данных data.
-            repeat отвечает за цикл повторения, задается в мс,
-            None - без изменений.
-            В случае успешной отправки, возвращает кол-во переданных байт.
-            
+            Передача данных data. При repeat = False включается режим
+            цикличной передачи сообщения.
+               
             Примеры data:
             '55 AA 01 00 01'
         '''
 #        try:
-        if True:
-            tmp = bytearray()
-            for x in data.split():
-                tmp.append(x.decode('hex'))
-            self.data_temp = data
-            
-            a = QtCore.QObject()
-            a.emit(QtCore.SIGNAL('signalSendData()'))
-            
-            # проверим необходимость выполнения действий для вкл.откл.
-            # повторения посылок
-            if repeat != None:
-                if repeat == 0:
-                    self.timerTr.stop()
-                else:
-                    self.timerTr.stop()
-                    self.timerTr.setInterval(repeat)
-                    self.timerTr.start()
-                    
-            return self._port.write(tmp)
+        # Установка флага повторной передачи, с проверкой входных данных
+        if type(repeat) == bool:
+            self._repeat = repeat
+        else:
+            self._repeat = False
+        self._time = 0
+
+        tmp = bytearray()
+        for x in data.split():
+            tmp.append(x.decode('hex'))
+        self._bufTrData = tmp
+        
+        print self._bufTrData
+        print repeat
+        print self._time
 #        except:
 #            print self.sendData, 'Ошибка при попытке отправить данные'
-    
-    def repeatSendData(self):
-        ''' (self) -> None
-        
-            Повторная отправка сообщения
-        '''
-        self.sendData(self.data_temp)
         
     def repeatStop(self):
         ''' (self) -> None
         
             Остановка отправки повторных сообщений
         '''
-        self.timerTr.stop()
+        self._repeat = False
     
     def _readData(self):
         ''' (self) -> None
@@ -322,9 +309,34 @@ class Interface():
             Производится считывание данных из порта
             
         '''
-        pass
-            
+        s = self.port.readall()
+        print s
+        if len(s) <= 0:
+            return
+
+        read = []
+                
+        for c in s:
+            read.append(c.encode('hex').upper())
+     
+    def _timerCycle(self):
+        ''' (self) -> None
+         
+             Цикл таймера
+        '''
+        print "I am here"
     
+        # проверим необходимость повторной передачи
+        if self.time > 0:
+            self._time -= 1
+        if self._time == 0:
+            self._port.write(self._bufTrData)
+            if self._repeat == True:
+                self._time = self._repeatTime
+            else:
+                self._time = -1
+        
+          
 if __name__ == '__main__':
     print "Создан элемент port, выбран 'COM1'"
     port = Interface('COM1')

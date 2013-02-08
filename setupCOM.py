@@ -20,6 +20,7 @@ class SetupCOM(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         
+        # установка фиксированного размера окна
         flag = QtCore.Qt.Window
         flag |= QtCore.Qt.MSWindowsFixedSizeDialogHint
         self.setWindowFlags(flag)
@@ -27,6 +28,7 @@ class SetupCOM(QtGui.QWidget):
         # флаг наличия изменений
         self._modify = False
         
+        # создание элементов виджета
         self.createWidget()
 
     def fillPortBox(self, data, val='COM1'):

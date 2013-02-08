@@ -297,10 +297,11 @@ class TabAdjust(QtGui.QWidget):
         if len(filename) != 0:
             self.saveFileHEX(name=filename)
     
-    def saveFileHEX(self, key='', name='MkUM.hex'):
+    def saveFileHEX(self, chacked=False, name='MkUM.hex'):
         ''' (self, name) -> None
             
             Сохраняем файл прошивки с путем/имененм name
+            chacked - 
         '''
         # считаем файл прошивки и разобъем ее на строки
         try:
@@ -378,9 +379,7 @@ class TabAdjust(QtGui.QWidget):
 #            print "new = ", origHEX[posLine]
             posLine += 1
             posInData = 0
-        
-        print key
-        print name
+    
         fSave = open(name, 'w')
         for x in origHEX:
             fSave.write(x + '\n')

@@ -113,7 +113,7 @@ class MyFrame(QtGui.QMainWindow):
             
             Установка новых значений настроек порта.
         '''
-        self.interface.setPortName(self.setupCOM.portEdit.currentText())
+        self.interface.setPort(self.setupCOM.portEdit.currentText())
         self.interface.setByteSize(self.setupCOM.byteSizeEdit.currentText())
         self.interface.setBaudRate(self.setupCOM.baudRateEdit.currentText())
         self.interface.setParity(self.setupCOM.parityEdit.currentText())
