@@ -8,6 +8,7 @@ import sys
 import serial
 from PyQt4 import QtGui
 from PyQt4 import QtCore
+import time
 
 
 class mySerial(QtGui.QWidget):
@@ -34,7 +35,7 @@ class mySerial(QtGui.QWidget):
         # флаг наличия изменений
         self._modify = False
         
-        # настройки порта
+        # начальная настройка порта
         self.settings = {}
         self.setPort(port)
         self.setBaudRate(baudrate)
@@ -47,11 +48,32 @@ class mySerial(QtGui.QWidget):
         
         # последовательный порт
         self._port = serial.Serial()
+        self._port.setTimeout(0)
+        self._command = "55 AA 02 00 02"
         
-        # таймер
-        self._timer = QtCore.QTimer()
-        self._timer.setInterval(1)
-        self._timer.timeout.connect(self._cycle)
+        # флаг принятой посылки (True - есть посылка)
+        self._bRead = False
+        # номер текущего принятого байта согласно протоколу
+        self._cnt = 0
+        # массив данных
+        self._data = []
+        # кол-вод байт данных
+        self._lenght = 0
+        # контрольная сумма
+        self._crc = 0
+        
+        # таймер передатчика
+        self._timerTr = QtCore.QTimer()
+        self._timerTr.setInterval(500)
+        self._timerTr.timeout.connect(self._cycleTr)
+        
+        # таймер приемника
+        self._timerRc = QtCore.QTimer()
+        self._timerRc.setInterval(5)
+        self._timerRc.timeout.connect(self._cycleRc)
+        
+        # часы
+        self._clock = QtCore.QTime.currentTime()
             
     def openPort(self):
         ''' (self) -> bool
@@ -66,7 +88,8 @@ class mySerial(QtGui.QWidget):
         
         try:
             self._port.open()
-            self._timer.start()
+            self._timerTr.start()
+            self._timerRc.start()
         except:
             print self.openPort
             print "Не удалось открыть порт",
@@ -78,19 +101,39 @@ class mySerial(QtGui.QWidget):
         '''
         try:
             self._port.close()
-            self._timer.stop()
+            self._timerTr.stop()
+            self._timerRc.stop()
         except:
             print self.closePort
             print "Не удалось закрыть порт"
             raise
     
-    def _cycle(self):
+    def _cycleRc(self):
+        ''' (self) -> None
+        
+            Цикл работы приемника
+        '''
+        tmp = self._port.readall()
+         
+        # возврат в случае пустой строки
+        if not tmp:
+            return
+        # возврат если предыдущее сообщение еще не обработано
+        if self._bRead:
+            return
+        
+        # посимвольная проверка на соответствие протоколу
+        for x in tmp:
+            self._protocol(x.encode('hex').upper())
+    
+    def _cycleTr(self):
         ''' (self) -> None
             
-            Цикл работы таймера.
+            Цикл работы таймера передатчика.
         '''
-        print 'Прошла 1 мс'
+        print 'Отправка сообщения: ', self._command
         
+        self._port.write(bytearray.fromhex(self._command))
         
     def fillPortBox(self, data=None, val='COM1'):
         ''' (self, list, str) -> None
@@ -360,13 +403,13 @@ class mySerial(QtGui.QWidget):
         self.pApply.setDisabled(True)
         
     def scanPorts(self):
-        ''' () -> (int, str)
+        ''' () -> [(int, str)]
 
         Scan for available ports.
-        Return list of tuples (num, name)
+        Return list of tuples [(num, name)]
 
         Сканер портов.
-        Возвращает список доступных (num, name)
+        Возвращает список доступных [(num, name)]
         
         >>> ports.scanPorts()
         [(0, 'COM1'), (5, 'COM6')]
@@ -472,7 +515,79 @@ class mySerial(QtGui.QWidget):
         self.stopBitsEdit.currentIndexChanged.connect(self.setFlagModify)
         self.parityEdit.currentIndexChanged.connect(self.setFlagModify)
         
+    def _protocol(self, char):
+        ''' (self, str) -> None
+         
+             Проверка принятых байт по протоколу. 
+             Примеры входных данных: 'AA' '31'
+        '''
+        if self._cnt == 0:
+            if char == '55':
+                self._cnt = 1
+        elif self._cnt == 1:
+            if char == 'AA':
+                self._cnt = 2
+            else:
+                self._cnt = 0
+        elif self._cnt == 2:
+            self._com = char
+            self._cnt += 1
+        elif self._cnt == 3:
+            self._lenght = int(char, 16)
+            self._cnt += 1
+        else:
+            if self._cnt < (5 + self._lenght - 1):
+                self._data.append(char)
+                self._cnt += 1
+            else:
+                if self._checkCRC(char):
+                    self._bRead = True
+                    self.emit(QtCore.SIGNAL("readData(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+                              self._com, self._lenght, self._data)
+                self._cnt = 0
+
+    def _checkCRC(self, crc, com=None, lenght=None, data=None):
+        ''' (self, str, str, int, str) -> crc
+            
+            Проверка полученного CRC (например 'AB') и вычисленного.
+            
+            Возвращает True в случае совпадения
+            
+            >>> _checkCRC('02', '02', 0, [])
+            True
+        '''
+        if com is None:
+            com = self._com
+        if isinstance(com, str):
+            com = int(com, 16)
+        calcCRC = com
         
+        if lenght is None:
+            lenght = self._lenght
+        if isinstance(lenght, str):
+            lenght = int(lenght, 16)
+        calcCRC += lenght
+        
+        if data is None:
+            data = self._data
+        for x in data:
+            if isinstance(x, str):
+                x = int(x, 16)
+            calcCRC += x
+        calcCRC %= 256
+        print 'com =', com, 'lenght=', lenght, 'data=', data
+        print 'calcCRC = ', calcCRC
+        print 'crc = ', crc
+        
+        if isinstance(crc, str):
+            crc = int(crc, 16)
+
+        return calcCRC == crc
+        
+    def clrReadFlag(self):
+        self._bRead = False
+        self._data = []
+    
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     
@@ -485,9 +600,9 @@ if __name__ == '__main__':
     my_frame.closePort()
     
     # проверка открытия порта с нужными настройками
-    my_frame.setSettings(settings={'port': 'COM2', 'baudrate': 19200})
+    my_frame.setSettings(settings={'port': 'COM2', 'baudrate': 1200})
     my_frame.openPort()
-    my_frame.closePort()
+#    my_frame.closePort()
     
     my_frame.show()
     app.exec_()

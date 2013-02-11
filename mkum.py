@@ -10,8 +10,7 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 
 import tab_adjust
-import setupCOM
-import interface
+import mySerial
 # import mySpreadsheet
 # подключение библиотеки иконок
 import resources_rc
@@ -113,11 +112,11 @@ class MyFrame(QtGui.QMainWindow):
             
             Установка новых значений настроек порта.
         '''
-        self.interface.setPort(self.setupCOM.portEdit.currentText())
-        self.interface.setByteSize(self.setupCOM.byteSizeEdit.currentText())
-        self.interface.setBaudRate(self.setupCOM.baudRateEdit.currentText())
-        self.interface.setParity(self.setupCOM.parityEdit.currentText())
-        self.interface.setStopBits(self.setupCOM.stopBitsEdit.currentText())
+#        self.interface.setPort(self.setupCOM.portEdit.currentText())
+#        self.interface.setByteSize(self.setupCOM.byteSizeEdit.currentText())
+#        self.interface.setBaudRate(self.setupCOM.baudRateEdit.currentText())
+#        self.interface.setParity(self.setupCOM.parityEdit.currentText())
+#        self.interface.setStopBits(self.setupCOM.stopBitsEdit.currentText())
         self.setupCOM.clearFlagModify()
     
     def evShowSetupPort(self):
@@ -138,7 +137,7 @@ class MyFrame(QtGui.QMainWindow):
             Прекращение работы с ком-портом.
         '''
         try:
-            self.interface.closePort()
+            self.setupCOM.closePort()
             
             self.aOpenPort.setEnabled(True)
             self.aSetupPort.setEnabled(True)
@@ -152,9 +151,9 @@ class MyFrame(QtGui.QMainWindow):
             Открыть ком-порт. Начать работу.
         '''
         try:
-            self.interface.openPort()
+            self.setupCOM.openPort()
             
-            self.interface.sendData("55 AA 01 00 01", 1000)
+#            self.setupCOM.sendData("55 AA 01 00 01")
                 
             self.aOpenPort.setDisabled(True)
             self.aSetupPort.setDisabled(True)
@@ -178,52 +177,7 @@ class MyFrame(QtGui.QMainWindow):
             self.devInfo[cities] = [i, u"Текст %d" % i]
 #            self.tProject.addTopLevelItem(cities)
    
-    def createParamList(self):
-        ''' (self) -> QTasbleWidget
-            
-            Создание таблицы со списком параметров
-        '''
-        self.lParam = QtGui.QTableWidget(3, 2)
-#        self.lParam.setSizeIncrement(5, 5)
-        
-        cell_00 = QtGui.QTableWidgetItem(u"Версия платы:")
-        cell_10 = QtGui.QTableWidgetItem(u"Частота:")
-        cell_20 = QtGui.QTableWidgetItem(u"Дополнительно:")
-        
-        table = self.lParam
-        table.horizontalHeader().hide()
-        table.verticalHeader().hide()
-        
-        table.setItem(0, 0, cell_00)
-        table.setItem(1, 0, cell_10)
-        table.setItem(2, 0, cell_20)
-        
-        # первый столбец имеет фиксированную ширину, второй плавающую
-        table.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Fixed)
-        table.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-        
-        # все строки кроме последней имеют фиксированную высоту
-        # высота последней строки - плавающая
-        for i in range(2):
-            table.verticalHeader().setResizeMode(i, QtGui.QHeaderView.Fixed)
-        table.verticalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
-        
-        # подгоним высоту строк под реальные размеры
-        # и ширину первой колонки
-        table.resizeRowsToContents()
-        table.resizeColumnToContents(0)
-
-        return table
-        
-    def updateParamList(self):
-        pass
    
-    def printData(self):
-        '''
-        
-        '''
-        print 'ssss'
-#        self.tabAdjust1.debugTE.setText(data)
    
     def createStatusBar(self, parent=None):
         ''' (self, parent) -> QStatusBar
@@ -276,6 +230,7 @@ class MyFrame(QtGui.QMainWindow):
         icon = folder_icons + 'Previous_24x24.png'
         self.aPrev = QtGui.QAction(QtGui.QIcon(icon), u'Предыдущий', self)
         self.aPrev.triggered.connect(self.evPrev)
+        self.aPrev.setDisabled(True)
 #        self.connect(self.aPrev, QtCore.SIGNAL('triggered()'),
 #                     self.evPrev)
         
@@ -283,34 +238,41 @@ class MyFrame(QtGui.QMainWindow):
         icon = folder_icons + 'Next_24x24.png'
         self.aNext = QtGui.QAction(QtGui.QIcon(icon), u'Следующий', self)
         self.aNext.triggered.connect(self.evNext)
+        self.aNext.setDisabled(True)
 #        self.connect(self.aNext, QtCore.SIGNAL('triggered()'),
 #                     self.evNext)
         
         # создаем действие "Помощь"
         icon = folder_icons + 'help_24x24.png'
-        self.aHelp = QtGui.QAction(QtGui.QIcon(icon), u'Вызов справки', self)
+        self.aHelp = QtGui.QAction(QtGui.QIcon(icon), u'Помощь', self)
+        self.aHelp.setDisabled(True)
         
         # создаем действие "О программе"
         icon = folder_icons + 'information_24x24.png'
         self.aAbout = QtGui.QAction(QtGui.QIcon(icon), u'О программе', self)
+        self.aAbout.setDisabled(True)
         
         # действие "Создать новый
         icon = folder_icons + 'new_24x24.png'
         self.aNewFile = QtGui.QAction(QtGui.QIcon(icon), u'Новый...', self)
         self.aNewFile.setShortcut("Ctrl+N")
+        self.aNewFile.setDisabled(True)
         
         # создаем действие "Открыть"
         icon = folder_icons + 'open_24x24.png'
         self.aOpenFile = QtGui.QAction(QtGui.QIcon(icon), u'Открыть...', self)
         self.aOpenFile.setShortcut("Ctrl+O")
+        self.aOpenFile.setDisabled(True)
         
         # создаем действие "Сохранить"
         icon = folder_icons + 'save_24x24.png'
         self.aSaveFile = QtGui.QAction(QtGui.QIcon(icon), u'Сохранить', self)
         self.aSaveFile.setShortcut("Ctrl+S")
+        self.aSaveFile.setDisabled(True)
         
         # создаем действие "Сохранить как..."
         self.aSaveAsFile = QtGui.QAction(u'Сохранить как...', self)
+        self.aSaveAsFile.setDisabled(True)
         
         # действие "Настройка порта"
         icon = folder_icons + 'settings_24x24.png'
@@ -371,7 +333,7 @@ class MyFrame(QtGui.QMainWindow):
         self.barSetup.addAction(self.aNext)
         
         #     Помощь
-        self.barHelp = self.myBar.addMenu(u'&Справка')
+        self.barHelp = self.myBar.addMenu(u'&Помощь')
         self.barHelp.addAction(self.aHelp)
         self.barHelp.addSeparator()
         self.barHelp.addAction(self.aAbout)
@@ -438,40 +400,60 @@ class MyFrame(QtGui.QMainWindow):
         
             Создание переменных для работы с портом.
         '''
-        self.interface = interface.Interface('COM1')
-        self.connect(self, QtCore.SIGNAL("signalSendData()"), self.printData)
         
-        # создадим виджет настройки порта
-        self.setupCOM = setupCOM.SetupCOM(parent=self)
-        self.setupCOM.setWindowTitle(self.aSetupPort.text())
-        self.setupCOM.setWindowIcon(self.aSetupPort.icon())
+#        self.interface = interface.Interface('COM1')
+#        self.connect(self, QtCore.SIGNAL("signalSendData()"), self.printData)
+
+#        # создадим виджет настройки порта
+#        self.setupCOM = setupCOM.SetupCOM(parent=self)
+#        self.setupCOM.setWindowTitle(self.aSetupPort.text())
+#        self.setupCOM.setWindowIcon(self.aSetupPort.icon())
+
+#        # заполним поля на форме
+#        # и сбросим флаг наличия изменений
+#        self.updatePorts()
+#        self.setupCOM.fillBaudRateBox(self.interface.getAvailableBaudRates(),
+#                                      self.interface.getBaudRate())
+#        self.setupCOM.fillStopBitsBox(self.interface.getAvailableStopBits(),
+#                                      self.interface.getStopBits())
+#        self.setupCOM.fillByteSize(self.interface.getAvailableByteSize(),
+#                                   self.interface.getByteSize())
+#        self.setupCOM.fillParityBox(self.interface.getAvailableParities(),
+#                                    self.interface.getParity())
+#        self.setupCOM.clearFlagModify()
+
+#        # настройка сигналов и слотов
+#        #    сканирование доступных портов
+#        self.setupCOM.pScan.clicked.connect(self.updatePorts)
+#        #    "Отменить" - просто закрываем форму
+#        self.setupCOM.pAbort.clicked.connect(self.setupCOM.close)
+#        #    "Принять" - устанавливаем новые настройки и зкрываем форму
+#        self.setupCOM.pApply.clicked.connect(self.evSetupPort)
+#        self.setupCOM.pApply.clicked.connect(self.setupCOM.close)
+        self.setupCOM = mySerial.mySerial(parent=self, port='COM2')
+        self.setupCOM.setWindowTitle(u'Настройка порта')
         
-        # заполним поля на форме
-        # и сбросим флаг наличия изменений
-        self.updatePorts()
-        self.setupCOM.fillBaudRateBox(self.interface.getAvailableBaudRates(),
-                                      self.interface.getBaudRate())
-        self.setupCOM.fillStopBitsBox(self.interface.getAvailableStopBits(),
-                                      self.interface.getStopBits())
-        self.setupCOM.fillByteSize(self.interface.getAvailableByteSize(),
-                                   self.interface.getByteSize())
-        self.setupCOM.fillParityBox(self.interface.getAvailableParities(),
-                                    self.interface.getParity())
-        self.setupCOM.clearFlagModify()
-        
-        # настройка сигналов и слотов
-        #    сканирование доступных портов
-        self.setupCOM.pScan.clicked.connect(self.updatePorts)
-        #    "Отменить" - просто закрываем форму
-        self.setupCOM.pAbort.clicked.connect(self.setupCOM.close)
-        #    "Принять" - устанавливаем новые настройки и зкрываем форму
-        self.setupCOM.pApply.clicked.connect(self.evSetupPort)
-        self.setupCOM.pApply.clicked.connect(self.setupCOM.close)
-                
         # сделаем окно модальным
         # + в данном случае виджет должен иметь предка self !!!
         self.setupCOM.setWindowModality(QtCore.Qt.WindowModal)
-                    
+        self.connect(self.setupCOM,
+                     QtCore.SIGNAL("readData(PyQt_PyObject, PyQt_PyObject,\
+                     PyQt_PyObject)"),
+                     self.protocol)
+      
+    def protocol(self, com, lenght, data):
+        ''' (self, str, int, list of str) -> None
+        
+            Извлечение данных из посылки согласно протоколу.
+        '''
+        self.tabAdjust1.readValU.setText(str(int(data[4] + data[5], 16)))
+        self.tabAdjust1.readValI1.setText(str(int(data[6] + data[7], 16)))
+        self.tabAdjust1.readValI2.setText('0')
+        self.tabAdjust1.readValU48.setText('0')
+        self.tabAdjust1.readValUwork.setText('0')
+        
+        # разрешение приема следующей посылки
+        self.setupCOM.clrReadFlag()
     
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
