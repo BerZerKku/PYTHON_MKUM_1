@@ -10,6 +10,7 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 
 import tab_adjust
+import tab_check
 import mySerial
 # import mySpreadsheet
 # подключение библиотеки иконок
@@ -52,14 +53,15 @@ class MyFrame(QtGui.QMainWindow):
         self.setWindowFlags(flag)
         
         # определяем строку подсказки и шрифт
-        self.setToolTip(u'This is <b>myFrame</b> widget')
-        QtGui.QToolTip.setFont(QtGui.QFont('oldEnglish', 10))
+#        self.setToolTip(u'This is <b>myFrame</b> widget')
+#        QtGui.QToolTip.setFont(QtGui.QFont('oldEnglish', 10))
         
+        self.createPort()
         self.createMainWindow()
         self.createActions()
         self.createToolbar()
         self.createMenu()
-        self.createPort()
+        
             
     def evPrev(self):
         # self.interface.repeatStop()
@@ -359,14 +361,16 @@ class MyFrame(QtGui.QMainWindow):
 #        self.fillProjectTree(u'МкУМ')
          
         # таблица параметров
-#        self.createParamList()
         
         # панель с вкладками
         # "PyQT.Создание оконных приложений на Python 3" стр. 155
         self.myTabWidget = QtGui.QTabWidget()
+        self.myTabWidget.currentChanged.connect(self.setCommand)
         self.tabAdjust1 = tab_adjust.TabAdjust()
+        self.tabCheck1 = tab_check.TabCheck()
 #        self.tabAdjust2 = tab_adjust.TabAdjust()
         self.myTabWidget.addTab(self.tabAdjust1, u"Калибровка измерителя")
+        self.myTabWidget.addTab(self.tabCheck1, u"Проверка измерителя")
 #        self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
        
         gridTab1 = QtGui.QGridLayout()
@@ -400,36 +404,6 @@ class MyFrame(QtGui.QMainWindow):
         
             Создание переменных для работы с портом.
         '''
-        
-#        self.interface = interface.Interface('COM1')
-#        self.connect(self, QtCore.SIGNAL("signalSendData()"), self.printData)
-
-#        # создадим виджет настройки порта
-#        self.setupCOM = setupCOM.SetupCOM(parent=self)
-#        self.setupCOM.setWindowTitle(self.aSetupPort.text())
-#        self.setupCOM.setWindowIcon(self.aSetupPort.icon())
-
-#        # заполним поля на форме
-#        # и сбросим флаг наличия изменений
-#        self.updatePorts()
-#        self.setupCOM.fillBaudRateBox(self.interface.getAvailableBaudRates(),
-#                                      self.interface.getBaudRate())
-#        self.setupCOM.fillStopBitsBox(self.interface.getAvailableStopBits(),
-#                                      self.interface.getStopBits())
-#        self.setupCOM.fillByteSize(self.interface.getAvailableByteSize(),
-#                                   self.interface.getByteSize())
-#        self.setupCOM.fillParityBox(self.interface.getAvailableParities(),
-#                                    self.interface.getParity())
-#        self.setupCOM.clearFlagModify()
-
-#        # настройка сигналов и слотов
-#        #    сканирование доступных портов
-#        self.setupCOM.pScan.clicked.connect(self.updatePorts)
-#        #    "Отменить" - просто закрываем форму
-#        self.setupCOM.pAbort.clicked.connect(self.setupCOM.close)
-#        #    "Принять" - устанавливаем новые настройки и зкрываем форму
-#        self.setupCOM.pApply.clicked.connect(self.evSetupPort)
-#        self.setupCOM.pApply.clicked.connect(self.setupCOM.close)
         self.setupCOM = mySerial.mySerial(parent=self, port='COM2')
         self.setupCOM.setWindowTitle(u'Настройка порта')
         
@@ -446,14 +420,41 @@ class MyFrame(QtGui.QMainWindow):
         
             Извлечение данных из посылки согласно протоколу.
         '''
-        self.tabAdjust1.readValU.setText(str(int(data[4] + data[5], 16)))
-        self.tabAdjust1.readValI1.setText(str(int(data[6] + data[7], 16)))
-        self.tabAdjust1.readValI2.setText('0')
-        self.tabAdjust1.readValU48.setText('0')
-        self.tabAdjust1.readValUwork.setText('0')
+        index = self.myTabWidget.currentIndex()
+        if index == 0:
+            self.tabAdjust1.readValU.setText(str(int(data[4] + data[5], 16)))
+            self.tabAdjust1.readValI1.setText(str(int(data[6] + data[7], 16)))
+#            self.tabAdjust1.readValI2.setText('0')
+#            self.tabAdjust1.readValU48.setText('0')
+#            self.tabAdjust1.readValUwork.setText('0')
+        elif index == 1:
+            # байты    функция
+            # 0-1, целая и дробная части напряжения рабочей точки
+            # 2-3, целая и дробная части напряжения питания УМ
+            # 4-5, целая и дробная части напряжения выхода
+            # 6-7, целая и дробная части тока выхода
+            u = float("%d.%d" % (int(data[4], 16), int(data[5], 16)))
+            self.tabCheck1.readValU.setText('%.1f' % u)
+            i = int(data[6] + data[7], 16)
+            self.tabCheck1.readValI1.setText(str(i))
+            try:
+                r = round((1000 * u) / i, 1)
+            except:
+                r = "Ошибка вычисления"
+            self.tabCheck1.readValR.setText(str(r))
         
         # разрешение приема следующей посылки
         self.setupCOM.clrReadFlag()
+    
+    def setCommand(self, index):
+        ''' (self, int) -> None
+        
+            Выбор передаваемой команды
+        '''
+        if index == 0:
+            self.setupCOM.setCom('55 AA 02 00 02')
+        elif index == 1:
+            self.setupCOM.setCom('55 AA 01 00 01')
     
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

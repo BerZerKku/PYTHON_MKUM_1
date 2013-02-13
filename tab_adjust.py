@@ -67,26 +67,29 @@ class TabAdjust(QtGui.QWidget):
         self.checkValI1.setChecked(True)
         self.checkValI1.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
-        self.readValI2 = QtGui.QLineEdit(u'Нет данных')
-        self.readValI2.setDisabled(True)
-#        self.readValI2.setContextMenuPolicy(Qt.NoContextMenu)
-        self.checkValI2 = QtGui.QCheckBox()
-        self.checkValI2.setChecked(False)
-        self.checkValI2.setToolTip(u"Вкл./выкл. калибровки параметра.")
-        
-        self.readValU48 = QtGui.QLineEdit(u'Нет данных')
-        self.readValU48.setDisabled(True)
-#        self.readValU48.setContextMenuPolicy(Qt.NoContextMenu)
-        self.checkValU48 = QtGui.QCheckBox()
-        self.checkValU48.setChecked(False)
-        self.checkValU48.setToolTip(u"Вкл./выкл. калибровки параметра.")
-        
-        self.readValUwork = QtGui.QLineEdit(u'Нет данных')
-        self.readValUwork.setDisabled(True)
-#        self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
-        self.checkValUwork = QtGui.QCheckBox()
-        self.checkValUwork.setChecked(False)
-        self.checkValUwork.setToolTip(u"Вкл./выкл. калибровки параметра.")
+#        self.readValI2 = QtGui.QLineEdit(u'Нет данных')
+#        self.readValI2.setDisabled(True)
+# #        self.readValI2.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.checkValI2 = QtGui.QCheckBox()
+#        self.checkValI2.setChecked(False)
+#        self.checkValI2.setDisabled(True)
+#        self.checkValI2.setToolTip(u"Вкл./выкл. калибровки параметра.")
+#        
+#        self.readValU48 = QtGui.QLineEdit(u'Нет данных')
+#        self.readValU48.setDisabled(True)
+# #        self.readValU48.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.checkValU48 = QtGui.QCheckBox()
+#        self.checkValU48.setChecked(False)
+#        self.checkValU48.setDisabled(True)
+#        self.checkValU48.setToolTip(u"Вкл./выкл. калибровки параметра.")
+#        
+#        self.readValUwork = QtGui.QLineEdit(u'Нет данных')
+#        self.readValUwork.setDisabled(True)
+# #        self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
+#        self.checkValUwork = QtGui.QCheckBox()
+#        self.checkValUwork.setChecked(False)
+#        self.checkValUwork.setDisabled(True)
+#        self.checkValUwork.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.pSave = QtGui.QPushButton(u'Сохранить')
         self.pSave.clicked.connect(self.saveFileHEX)
@@ -95,6 +98,10 @@ class TabAdjust(QtGui.QWidget):
         self.pSaveAs = QtGui.QPushButton(u'Сохранить как...')
         self.pSaveAs.clicked.connect(self.saveFileAs)
         self.pSaveAs.setDisabled(True)
+        
+        self.pOpen = QtGui.QPushButton(u'Открыть...')
+        self.pOpen.clicked.connect(self.openFile)
+        self.pOpen.setEnabled(True)
         
         # создаем область для графика
 #        self.figure = pylab.figure()
@@ -107,8 +114,13 @@ class TabAdjust(QtGui.QWidget):
         # установка таблицы в сетку
         grid.addWidget(self.adjTable, 0, 0, 7, 2)
         
-        grid.addWidget(self.pSave, 7, 0)
-        grid.addWidget(self.pSaveAs, 7, 1)
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addWidget(self.pOpen)
+        hbox1.addWidget(self.pSave)
+        hbox1.addWidget(self.pSaveAs)
+#        grid.addWidget(self.pSave, 7, 0)
+#        grid.addWidget(self.pSaveAs, 7, 1)
+        grid.addLayout(hbox1, 7, 0, 2, 1)
         
         # начальные положения для полей данных
         col = 2
@@ -140,26 +152,26 @@ class TabAdjust(QtGui.QWidget):
         grid.addWidget(self.readValI1, row, col + 1)
         grid.addWidget(self.checkValI1, row, col + 2)
         
-        #     ток выхода 2
-        row += 1
-        grid.addWidget(QtGui.QLabel(u'Ток выхода 2'), row, col,
-                       alignment=Qt.AlignRight)
-        grid.addWidget(self.readValI2, row, col + 1)
-        grid.addWidget(self.checkValI2, row, col + 2)
-        
-        #     напряжение питания
-        row += 1
-        grid.addWidget(QtGui.QLabel(u'Напряжение питания'), row, col,
-                       alignment=Qt.AlignRight)
-        grid.addWidget(self.readValU48, row, col + 1)
-        grid.addWidget(self.checkValU48, row, col + 2)
-        
-        #     напряжение в рабочей точке
-        row += 1
-        grid.addWidget(QtGui.QLabel(u'Напряжение раб.т'), row, col,
-                       alignment=Qt.AlignRight)
-        grid.addWidget(self.readValUwork, row, col + 1)
-        grid.addWidget(self.checkValUwork, row, col + 2)
+#        #     ток выхода 2
+#        row += 1
+#        grid.addWidget(QtGui.QLabel(u'Ток выхода 2'), row, col,
+#                       alignment=Qt.AlignRight)
+#        grid.addWidget(self.readValI2, row, col + 1)
+#        grid.addWidget(self.checkValI2, row, col + 2)
+
+#        #     напряжение питания
+#        row += 1
+#        grid.addWidget(QtGui.QLabel(u'Напряжение питания'), row, col,
+#                       alignment=Qt.AlignRight)
+#        grid.addWidget(self.readValU48, row, col + 1)
+#        grid.addWidget(self.checkValU48, row, col + 2)
+
+#        #     напряжение в рабочей точке
+#        row += 1
+#        grid.addWidget(QtGui.QLabel(u'Напряжение раб.т'), row, col,
+#                       alignment=Qt.AlignRight)
+#        grid.addWidget(self.readValUwork, row, col + 1)
+#        grid.addWidget(self.checkValUwork, row, col + 2)
         
         hbox.addLayout(grid)
 #        hbox.addWidget(self.canvas)
@@ -198,26 +210,26 @@ class TabAdjust(QtGui.QWidget):
                 print u'Ошибка значения АЦП "Ток выхода 1"'
                 error = True
         
-        valI2 = 0
-        if self.checkValI2.isChecked():
-            flag, valI2 = self.checkValue(self.readValI2.text())
-            if not flag:
-                print u'Ошибка значения АЦП "Ток выхода 2"'
-                error = True
+#        valI2 = 0
+#        if self.checkValI2.isChecked():
+#            flag, valI2 = self.checkValue(self.readValI2.text())
+#            if not flag:
+#                print u'Ошибка значения АЦП "Ток выхода 2"'
+#                error = True
         
-        valU48 = 0
-        if self.checkValU48.isChecked():
-            flag, valU48 = self.checkValue(self.readValU48.text())
-            if not flag:
-                print u'Ошибка значения АЦП "Напряжение питания"'
-                error = True
-        
-        valUwork = 0
-        if self.checkValUwork.isChecked():
-            flag, valUwork = self.checkValue(self.readValUwork.text())
-            if not flag:
-                print u'Ошибка значения АЦП "Напряжение рабочей точки"'
-                error = True
+#        valU48 = 0
+#        if self.checkValU48.isChecked():
+#            flag, valU48 = self.checkValue(self.readValU48.text())
+#            if not flag:
+#                print u'Ошибка значения АЦП "Напряжение питания"'
+#                error = True
+       
+#        valUwork = 0
+#        if self.checkValUwork.isChecked():
+#            flag, valUwork = self.checkValue(self.readValUwork.text())
+#            if not flag:
+#                print u'Ошибка значения АЦП "Напряжение рабочей точки"'
+#                error = True
         
         # если была ошибка
         if error:
@@ -229,6 +241,8 @@ class TabAdjust(QtGui.QWidget):
         
         if self.adjTable.isFull():
             self.pAdd.setDisabled(True)
+            self.pSave.setEnabled(True)
+            self.pSaveAs.setEnabled(True)
                    
     def valUChange(self, val=""):
         ''' (self, str) -> None
@@ -276,6 +290,70 @@ class TabAdjust(QtGui.QWidget):
         
         return sost, val
     
+    def openFile(self):
+        ''' (self) -> None
+            
+            Открытие файла прошивки с последующим заполнением таблицы.
+        '''
+        filename = QtGui.QFileDialog.getOpenFileName(self, u'Открыть',
+                                                    filter="HEX Files (*.hex)")
+        
+        try:
+            fileHEX = open(filename, 'r')
+            origHEX = fileHEX.read()
+            fileHEX.close()
+            origHEX = origHEX.splitlines()
+        except:
+            print u"Не удалось считать файл прошивки."
+            return
+        
+        # поиск начала структуры данных
+        posLine = 0
+        posInData = -1
+        for i in range(len(origHEX)):
+            # -9 - служебная информация
+            posInData = origHEX[i].find("9178") - 9
+            if posInData >= 0:
+                posLine = i
+                break
+        else:
+            print u"Ошибка файла прошивки"
+            return
+        
+        # 4 байта - '9178'
+        # 8 байт - множитель для напряжения в рабочей точке
+        # 8 байт - множитель для напряжения питания
+        # 4 * (16) - массив данных int(Uацп, u, Iацп, i)
+        lenght = 4 + 8 + 8 + 4 * (4 + 4 + 4 + 4)
+        l = 0
+        
+        # извлечение нужных данных
+        m = ""
+        while l < lenght:
+#            print "old = ", origHEX[posLine]
+            data = origHEX[posLine][9 + posInData:-2]
+            # пропускаем не интересующие нас 20 первых символов
+            s = ""
+            for char in data:
+                if l >= 20:
+                    s += char
+                l += 1
+            m += s
+            posLine += 1
+            posInData = 0
+        
+        # разбивка строки на int
+        mas = []
+        for i in range(16):
+            tmp = m[i * 4: i * 4 + 4]
+            tmp = tmp[-2:] + tmp[:2]
+            mas.append(int(tmp, 16))
+        # заполнение таблицы
+        for row in range(4):
+            self.adjTable.item(row, 0).setText(str(mas[row * 2 + 1]))
+            self.adjTable.item(row, 1).setText(str(mas[row * 2 + 0]))
+            self.adjTable.item(row, 2).setText(str(mas[row * 2 + 8]))
+        
     def openFileHEX(self):
         ''' (self) -> str
         
@@ -294,7 +372,7 @@ class TabAdjust(QtGui.QWidget):
         '''
         filename = QtGui.QFileDialog.getSaveFileName(self, u"Сохранить как...",
                                         filter="HEX Files (*.hex)")
-        if len(filename) != 0:
+        if filename:
             self.saveFileHEX(name=filename)
     
     def saveFileHEX(self, chacked=False, name='MkUM.hex'):
@@ -314,22 +392,15 @@ class TabAdjust(QtGui.QWidget):
         # считаем из таблицы значения, и преобразуем их в hex-строку
         data = ""
         #    напряжение
-#        print "U(adc)"
         for row in range(4):
             tmp = self.intToHex(self.adjTable.item(row, 1).text())
             tmp += self.intToHex(self.adjTable.item(row, 0).text())
-#            print self.adjTable.item(row, 1).text(),
-#            print self.adjTable.item(row, 0).text(),
-#            print tmp
             data += tmp
         #    ток
-#        print "I(adc)"
         for row in range(4):
             tmp = self.intToHex(self.adjTable.item(row, 2).text())
-            i = (int(self.adjTable.item(row, 0).text()) * 1000) / 75
+            i = int(round(int(self.adjTable.item(row, 0).text()) * 1000 / 75.0))
             tmp += self.intToHex(str(i))
-#            print i, self.adjTable.item(row, 2).text(),
-#            print tmp
             data += tmp
             
         # поиск начала структуры данных

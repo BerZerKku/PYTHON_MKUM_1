@@ -60,6 +60,7 @@ class MySpreadsheet(QtGui.QTableWidget):
         # заполнение таблицы
         for i in range(row):
             for j in range(column):
+                
                 item = QtGui.QTableWidgetItem("R%d C%d" % (i, j))
                 item.setTextAlignment(Qt.AlignCenter)
 #                if j != 0:
@@ -78,9 +79,8 @@ class MySpreadsheet(QtGui.QTableWidget):
                 item.setFlags(flag)
                 self.setItem(i, j, item)
         
-        self.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem())
-        self.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem())
-        self.setHorizontalHeaderItem(2, QtGui.QTableWidgetItem())
+        for j in range(column):
+            self.setHorizontalHeaderItem(j, QtGui.QTableWidgetItem())
         
         # запретим изменение размеров столбцов и колонок
         # self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
@@ -218,7 +218,7 @@ class MySpreadsheet(QtGui.QTableWidget):
         ''' (self) -> None
         
             Сортировка данным в таблице по возрастанию в первой колонке.
-        '''   
+        '''
         # если кол-во заполненных строк меньше 2 то сортировка не нужна
         numRows = self.numFilledRows()
         if numRows <= 1:
@@ -227,8 +227,8 @@ class MySpreadsheet(QtGui.QTableWidget):
         numRows -= 1
         for j in range(numRows):
             for i in range(numRows - j):
-                val_1 = int(self.item(i, 0).text())
-                val_2 = int(self.item(i + 1, 0).text())
+                val_1 = float(self.item(i, 0).text())
+                val_2 = float(self.item(i + 1, 0).text())
                 if (val_1 > val_2):
                     self.swapRows(i, i + 1)
             
@@ -260,7 +260,7 @@ class MySpreadsheet(QtGui.QTableWidget):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     
-    my_frame = MySpreadsheet(3, 3)
+    my_frame = MySpreadsheet(row=3, column=3)
     my_frame.show()
     
     my_frame.horizontalHeaderItem(0).setText(u"Uвых, В")

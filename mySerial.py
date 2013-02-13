@@ -49,7 +49,7 @@ class mySerial(QtGui.QWidget):
         # последовательный порт
         self._port = serial.Serial()
         self._port.setTimeout(0)
-        self._command = "55 AA 02 00 02"
+        self.setCom("55 AA 02 00 02")
         
         # флаг принятой посылки (True - есть посылка)
         self._bRead = False
@@ -130,10 +130,9 @@ class mySerial(QtGui.QWidget):
         ''' (self) -> None
             
             Цикл работы таймера передатчика.
-        '''
-        print 'Отправка сообщения: ', self._command
-        
+        '''        
         self._port.write(bytearray.fromhex(self._command))
+#        print self._command
         
     def fillPortBox(self, data=None, val='COM1'):
         ''' (self, list, str) -> None
@@ -542,7 +541,9 @@ class mySerial(QtGui.QWidget):
             else:
                 if self._checkCRC(char):
                     self._bRead = True
-                    self.emit(QtCore.SIGNAL("readData(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"),
+#                    print self._data
+                    self.emit(QtCore.SIGNAL("readData(PyQt_PyObject, \
+                                            PyQt_PyObject, PyQt_PyObject)"),
                               self._com, self._lenght, self._data)
                 self._cnt = 0
 
@@ -575,9 +576,6 @@ class mySerial(QtGui.QWidget):
                 x = int(x, 16)
             calcCRC += x
         calcCRC %= 256
-        print 'com =', com, 'lenght=', lenght, 'data=', data
-        print 'calcCRC = ', calcCRC
-        print 'crc = ', crc
         
         if isinstance(crc, str):
             crc = int(crc, 16)
@@ -585,8 +583,20 @@ class mySerial(QtGui.QWidget):
         return calcCRC == crc
         
     def clrReadFlag(self):
+        ''' (self) -> Non
+        
+            Разрешение приема следующей посылки данных
+        '''
         self._bRead = False
         self._data = []
+    
+    def setCom(self, data):
+        ''' (self, str) -> None
+        
+            Установки команды на передачу
+        '''
+        self._command = data
+    
     
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
@@ -602,7 +612,7 @@ if __name__ == '__main__':
     # проверка открытия порта с нужными настройками
     my_frame.setSettings(settings={'port': 'COM2', 'baudrate': 1200})
     my_frame.openPort()
-#    my_frame.closePort()
+    my_frame.closePort()
     
     my_frame.show()
     app.exec_()
