@@ -6,7 +6,6 @@ Created on 20.12.2012
 '''
 
 import sys
-import struct
 import my_func
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -337,12 +336,40 @@ class TabCheck(QtGui.QWidget):
             return
         
         # считывание сожержимого файла
-        f = open(filename, 'r')
-        data = f.read()
+        f = open(filename, 'rb')
+        data_bin = f.read()
         f.close()
         
+        data = []
+        for char in data_bin:
+            data.append(char.encode('hex').upper())
+        del data_bin
+        
         # сопротивление
-        r = int(data[0], 16)
+        r = my_func.strHexToInt(data[0])
+        print r
+        
+        # напряжения измеренные прибором
+        uOut = []
+        for i in range(6):
+            u = my_func.strHexToInt(data[i + 1])
+            if u == 0:
+                break
+            uOut.append(u)
+        print uOut
+        
+        # ток измеренный прибором
+        if r == 0:
+            print u'Error:'
+            print u'Считанное сопротивление из файла равно 0'
+            raise ValueError
+        iOut = []
+        for u in uOut:
+            iOut.append(int(round(u * 1000 / r)))
+        print iOut
+        
+        # ток 
+        
          
     def saveFileAs(self):
         ''' (self) -> None
