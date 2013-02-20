@@ -28,6 +28,7 @@ class TabAdjust(QtGui.QWidget):
         hbox = QtGui.QHBoxLayout(self)
         grid = QtGui.QGridLayout()
         self.adjTable = mySpreadsheet.MySpreadsheet()
+        self.adjTable.setFixedSize(280, 200)
         self.adjTable.horizontalHeaderItem(0).setText(u"Uвых, В")
         self.adjTable.horizontalHeaderItem(1).setText(u"Uацп")
         self.adjTable.horizontalHeaderItem(2).setText(u"Iацп")
@@ -46,13 +47,17 @@ class TabAdjust(QtGui.QWidget):
         
         # создадим поле для ввоода значения напряжения
         # это должно быть целое число от 1 до 100В
-        self.entValU = QtGui.QLineEdit(u'Uвых')
-        self.entValU.setValidator(QtGui.QIntValidator(1, 100, self))
-        self.entValU.clear()  # очистка текста
+#        self.entValU = QtGui.QLineEdit(u'Uвых')
+#        self.entValU.setValidator(QtGui.QIntValidator(1, 100, self))
+#        self.entValU.clear()  # очистка текста
+        self.entValU = QtGui.QSpinBox()
+        self.entValU.setRange(1, 100)
+
         #    уберем контекстное меню, т.к. могут быть проблемы с 'Undo'
         self.entValU.setContextMenuPolicy(Qt.NoContextMenu)
-        self.entValU.textChanged.connect(self.valUChange)
-          
+#        self.entValU.textChanged.connect(self.valUChange)
+        self.entValU.valueChanged.connect(self.valUChange)
+        
         self.readValU = QtGui.QLineEdit(u'Нет данных')
         self.readValU.setDisabled(True)
 #        self.readValU.setContextMenuPolicy(Qt.NoContextMenu)
@@ -117,10 +122,9 @@ class TabAdjust(QtGui.QWidget):
         hbox1 = QtGui.QHBoxLayout()
         hbox1.addWidget(self.pOpen)
         hbox1.addWidget(self.pSave)
-        hbox1.addWidget(self.pSaveAs)
 #        grid.addWidget(self.pSave, 7, 0)
 #        grid.addWidget(self.pSaveAs, 7, 1)
-        grid.addLayout(hbox1, 7, 0, 2, 1)
+        grid.addLayout(hbox1, 7, 0, 1, 2)
         
         # начальные положения для полей данных
         col = 2
@@ -180,6 +184,13 @@ class TabAdjust(QtGui.QWidget):
 #        self.timer = QtCore.QTimer()
 #        self.timer.start(200)
 #        self.timer.timeout.connect(self.valUChange)
+    
+    def getValU(self):
+        '''    None -> QString
+
+                Возвращает введеное значение напряжения.
+        '''
+        return self.entValU.text()
         
     def addPointToTable(self):
         ''' (self) -> None [SLOT]
@@ -193,8 +204,7 @@ class TabAdjust(QtGui.QWidget):
         # считаем и проверим имеющиеся данные
         # если по окончанию проверки флаг error будет True
         # добавление строки не произойдет
-        valUout = self.entValU.text()
-        self.entValU.setText("")
+        valUout = self.getValU()
         
         valU = 0
         if self.checkValU.isChecked():
@@ -233,8 +243,10 @@ class TabAdjust(QtGui.QWidget):
         
         # если была ошибка
         if error:
+            warn = QtGui.QMessageBox.warning(self, u'Ошибка ввода',
+                                      u'Некорректные данные АЦП.')
             return
-        
+            
         # добавим строку, и очистим поле ввода
         data = [valUout, valU, valI1]
         self.adjTable.addRowData(data)
@@ -250,9 +262,7 @@ class TabAdjust(QtGui.QWidget):
             Реакция на ввод/изменение напряжения. При отсутствии текста в поле
             блокируется возможность добавления новой записи. При заполненной
             таблице, появляется возможность сохранить прошивку.
-        '''
-
-        val = self.entValU.text()
+        ''' 
         if self.adjTable.isFull():
             # таблица полная, запретим возможность добавления данных
             # и разрешим сохранение прошивки
@@ -264,6 +274,7 @@ class TabAdjust(QtGui.QWidget):
             # и проверим данные в поле ввода напряжения
             self.pSave.setDisabled(True)
             self.pSaveAs.setDisabled(True)
+            val = self.entValU.text()
             if len(val) == 0:
                 self.pAdd.setDisabled(True)
             else:
@@ -276,7 +287,6 @@ class TabAdjust(QtGui.QWidget):
             выходит за диапазон 0..1023, возвращается False, val.
             Иначе True, val.
         '''
-        
         sost = False
         
         try:
@@ -318,6 +328,8 @@ class TabAdjust(QtGui.QWidget):
                 break
         else:
             print u"Ошибка файла прошивки"
+            QtGui.QMessageBox.warning(self, "Ошибка ввода",
+                                    "Ошибка загрузки исходного файла прошивки")
             return
         
         # 4 байта - '9178'

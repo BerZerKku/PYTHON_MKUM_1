@@ -6,6 +6,8 @@ Created on 20.12.2012
 '''
 
 import sys
+import struct
+import my_func
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
@@ -28,6 +30,7 @@ class TabCheck(QtGui.QWidget):
         hbox = QtGui.QHBoxLayout(self)
         grid = QtGui.QGridLayout()
         self.adjTable = mySpreadsheet.MySpreadsheet(row=6, column=5)
+        self.adjTable.setFixedSize(280, 200)
         self.adjTable.horizontalHeaderItem(0).setText(u"Uвых,В")
         self.adjTable.horizontalHeaderItem(1).setText(u"Uизм,В")
         self.adjTable.horizontalHeaderItem(2).setText(u"Iвых,мА")
@@ -48,12 +51,16 @@ class TabCheck(QtGui.QWidget):
         
         # создадим поле для ввоода значения напряжения
         # это должно быть целое число от 1 до 100В
-        self.entValU = QtGui.QLineEdit(u'Uвых')
-        self.entValU.setValidator(QtGui.QDoubleValidator(1, 99, 1, self))
-        self.entValU.clear()  # очистка текста
+#        self.entValU = QtGui.QLineEdit(u'Uвых')
+#        self.entValU.setValidator(QtGui.QDoubleValidator(1, 99, 1, self))
+#        self.entValU.clear()  # очистка текста
+        self.entValU = QtGui.QDoubleSpinBox()
+        self.entValU.setRange(0.0, 100.0)
+        self.entValU.setDecimals(1)
         #    уберем контекстное меню, т.к. могут быть проблемы с 'Undo'
         self.entValU.setContextMenuPolicy(Qt.NoContextMenu)
-        self.entValU.textChanged.connect(self.valUChange)
+#        self.entValU.textChanged.connect(self.valUChange)
+        self.entValU.valueChanged.connect(self.valUChange)
           
         self.readValU = QtGui.QLineEdit(u'Нет данных')
         self.readValU.setDisabled(True)
@@ -83,7 +90,7 @@ class TabCheck(QtGui.QWidget):
 #        self.checkValU48.setChecked(False)
 #        self.checkValU48.setDisabled(True)
 #        self.checkValU48.setToolTip(u"Вкл./выкл. калибровки параметра.")
-#        
+
 #        self.readValUwork = QtGui.QLineEdit(u'Нет данных')
 #        self.readValUwork.setDisabled(True)
 # #        self.readValUwork.setContextMenuPolicy(Qt.NoContextMenu)
@@ -93,7 +100,7 @@ class TabCheck(QtGui.QWidget):
 #        self.checkValUwork.setToolTip(u"Вкл./выкл. калибровки параметра.")
         
         self.pSave = QtGui.QPushButton(u'Сохранить')
-        self.pSave.clicked.connect(self.saveFileHEX)
+        self.pSave.clicked.connect(self.saveFile)
         self.pSave.setDisabled(True)
         
         self.pSaveAs = QtGui.QPushButton(u'Сохранить как...')
@@ -195,7 +202,7 @@ class TabCheck(QtGui.QWidget):
         # если по окончанию проверки флаг error будет True
         # добавление строки не произойдет
         flag, valUout = self.checkValue(self.entValU.text(), 1, 99)
-        self.entValU.setText("")
+#        self.entValU.setText("")
         if not flag:
             print u"Ошибка введенного значения напряжения выхода"
             error = True
@@ -248,6 +255,8 @@ class TabCheck(QtGui.QWidget):
         
         # если была ошибка
         if error:
+            QtGui.QMessageBox.warning(self, u'Ошибка ввода',
+                                      u'Некорректные данные АЦП.')
             return
         
         # добавим строку, и очистим поле ввода
@@ -285,7 +294,7 @@ class TabCheck(QtGui.QWidget):
                 self.pAdd.setEnabled(True)
             
     def checkValue(self, val, minVal, maxVal):
-        ''' (self, number) -> bool, float
+        ''' (self, str, number, number) -> bool, float
         
             Входная строка преобразуется в число val. Если полученное значение
             выходит за диапазон min <= val <= max, возвращается False, val.
@@ -300,10 +309,13 @@ class TabCheck(QtGui.QWidget):
         sost = False
         
         try:
+            # при наличии разделительной запятой в тексте, заменим на точку
+            val = val.replace(',', '.')
             val = float(val)
             sost = True
         except:
-            print self, u'Ошибка преобразования строки в float'
+            print u"Error:",
+            print u'Ошибка преобразования строки в float', self
             val = 0
 
         if sost:
@@ -316,168 +328,40 @@ class TabCheck(QtGui.QWidget):
     def openFile(self):
         ''' (self) -> None
             
-            Открытие файла прошивки с последующим заполнением таблицы.
+            Открытие файла данных с последующим заполнением таблицы.
         '''
-        filename = QtGui.QFileDialog.getOpenFileName(self, u'Открыть',
-                                                    filter="HEX Files (*.hex)")
+        filename = QtGui.QFileDialog.getOpenFileName(self, u"Открыть",
+                                        filter="Data Files (*.dat)")
         
-        try:
-            fileHEX = open(filename, 'r')
-            origHEX = fileHEX.read()
-            fileHEX.close()
-            origHEX = origHEX.splitlines()
-        except:
-            print u"Не удалось считать файл прошивки."
+        if not filename:
             return
         
-        # поиск начала структуры данных
-        posLine = 0
-        posInData = -1
-        for i in range(len(origHEX)):
-            # -9 - служебная информация
-            posInData = origHEX[i].find("9178") - 9
-            if posInData >= 0:
-                posLine = i
-                break
-        else:
-            print u"Ошибка файла прошивки"
-            return
+        # считывание сожержимого файла
+        f = open(filename, 'r')
+        data = f.read()
+        f.close()
         
-        # 4 байта - '9178'
-        # 8 байт - множитель для напряжения в рабочей точке
-        # 8 байт - множитель для напряжения питания
-        # 4 * (16) - массив данных int(Uацп, u, Iацп, i)
-        lenght = 4 + 8 + 8 + 4 * (4 + 4 + 4 + 4)
-        l = 0
-        
-        # извлечение нужных данных
-        m = ""
-        while l < lenght:
-#            print "old = ", origHEX[posLine]
-            data = origHEX[posLine][9 + posInData:-2]
-            # пропускаем не интересующие нас 20 первых символов
-            s = ""
-            for char in data:
-                if l >= 20:
-                    s += char
-                l += 1
-            m += s
-            posLine += 1
-            posInData = 0
-        
-        # разбивка строки на int
-        mas = []
-        for i in range(16):
-            tmp = m[i * 4: i * 4 + 4]
-            tmp = tmp[-2:] + tmp[:2]
-            mas.append(int(tmp, 16))
-        # заполнение таблицы
-        for row in range(4):
-            self.adjTable.item(row, 0).setText(str(mas[row * 2 + 1]))
-            self.adjTable.item(row, 1).setText(str(mas[row * 2 + 0]))
-            self.adjTable.item(row, 2).setText(str(mas[row * 2 + 8]))
-        
-    def openFileHEX(self):
-        ''' (self) -> str
-        
-            Открытие файла прошивки. Возвращает содержимое файла.
-        '''
-        fileHEX = open('MkUM.dat', 'r')
-        text = fileHEX.read()
-        fileHEX.close()
-
-        return text
-    
+        # сопротивление
+        r = int(data[0], 16)
+         
     def saveFileAs(self):
         ''' (self) -> None
             
             Сохранение файла с вызовом диалога "Сохранить как...".
         '''
         filename = QtGui.QFileDialog.getSaveFileName(self, u"Сохранить как...",
-                                        filter="HEX Files (*.hex)")
+                                        filter="Data Files (*.dat)")
         if filename:
-            self.saveFileHEX(name=filename)
+            self.saveFile(name=filename)
     
-    def saveFileHEX(self, chacked=False, name='MkUM.hex'):
+    def saveFile(self, chacked=False, name='MkUM.dat'):
         ''' (self, name) -> None
             
-            Сохраняем файл прошивки с путем/имененм name
-            chacked - 
+            Сохранение файла данных с путем/имененм name
+            chacked - для SIGNAL от кнопки
         '''
         # считаем файл прошивки и разобъем ее на строки
-        try:
-            origHEX = self.openFileHEX()
-            origHEX = origHEX.splitlines()
-        except:
-            print u"Не удалось считать оригинальный файл прошивки."
-            return
-        
-        # считаем из таблицы значения, и преобразуем их в hex-строку
-        data = ""
-        #    напряжение
-        for row in range(4):
-            tmp = self.intToHex(self.adjTable.item(row, 1).text())
-            tmp += self.intToHex(self.adjTable.item(row, 0).text())
-            data += tmp
-        #    ток
-        for row in range(4):
-            tmp = self.intToHex(self.adjTable.item(row, 2).text())
-            i = int(round(int(self.adjTable.item(row, 0).text()) * 1000 / 75.0))
-            tmp += self.intToHex(str(i))
-            data += tmp
-            
-        # поиск начала структуры данных
-        posLine = 0
-        posInData = -1
-        for i in range(len(origHEX)):
-            # -9 - служебная информация
-            posInData = origHEX[i].find("9178") - 9
-            if posInData >= 0:
-                # 20 - "9178" + 2 float коэффициентов
-                posInData += 20
-                posLine = i
-                break
-        else:
-            print u"Ошибка исходного файла прошивки"
-            return
-    
-        # заполним hex-file
-        # в строке данных прервые 9 байт - служебная информация
-        # байты в первой строке
-        # 1      ":" - признак начала строки
-        # 2-3    "xx" - кол-во байт данных в этой строке
-        # 4-7    "xxyy" - адрес
-        # 8-9    "00" - данные двоичного файлы
-        # 10-13  "9178" - начало массива
-        # 14-21  "aabbccdd" - множитель для напряжения в раб.точке (float)
-        # 22-29  "aabbccdd" - множитель для напряжения питания (float)
-        # 30-33  "aabb" - первое напряжение, младшим байтом вперед (int)
-        # 34-37  "aabb" - первое значение АЦП, младшим байтом вперед (int)
-        # 38-41  "aabb" - второе напряжение, младшим байтом вперед (int)
-        while len(data) > 0:
-#            print "old = ", origHEX[posLine]
-            infoInLine = origHEX[posLine][:9]
-            bytesInLine = int(origHEX[posLine][1:3], 16)
-            # dataInLine = origHEX[posLine][9:9 + 2 * bytesInLine]
-            tmp = data[:bytesInLine * 2 - posInData]
-#            print "posInData = %d, bytesInLine = %d" % (posInData,bytesInLine)
-#            print "tmp = %s, len = %d" % (tmp, len(tmp) / 2)
-            data = data.replace(tmp, "")
-            # при необходимости, добъем строку оригинальными данными
-            if len(data) == 0:
-                tmp += origHEX[posLine][bytesInLine * 2 - posInData - 3:-2]
-#            print "data = %s, len = %d" % (data, len(data) / 2)
-            newDataInLine = origHEX[posLine][9:9 + posInData] + tmp
-            origHEX[posLine] = infoInLine + newDataInLine
-            origHEX[posLine] += self.calcCRC(origHEX[posLine])
-#            print "new = ", origHEX[posLine]
-            posLine += 1
-            posInData = 0
-    
-        fSave = open(name, 'w')
-        for x in origHEX:
-            fSave.write(x + '\n')
-        fSave.close()
+        pass
   
     def intToHex(self, val):
         ''' (self, int) -> str
@@ -560,3 +444,35 @@ if __name__ == '__main__':
     QtGui.QApplication.setStyle('Cleanlooks')
     
     app.exec_()
+
+
+# import unittest
+#
+#
+# class TestTabCheck(unittest.TestCase):
+#    """${short_summary_of_testcase}
+#    """
+#    def setUp(self):
+# #        self.testFrame = TabCheck()
+#        self.app = QtGui.QApplication(sys.argv)
+#        self.form = TabCheck()
+
+#    def tearDown(self):
+#        """${no_tearDown_required}
+#        """
+#    pass  # skip tearDown
+#
+#    def testIntToHex(self):
+#        """${short_description_of_test}
+#        """
+# #        print self.testFrame
+#        self.assertEqual(self.form.intToHex(5), '0500')
+#        self.assertEqual(self.form.intToHex(270), '0E01')
+
+#    def testCalcCRC(self):
+#        self.assertEqual(
+#                self.form.calcCRC(':1007D00091789A998141E17A543F2B0005005800')
+#                ,'A5')
+#        self.assertEqual(
+#                self.form.calcCRC(':1007E0000A00B30014000E011E00270042004F00')
+#                ,'53')

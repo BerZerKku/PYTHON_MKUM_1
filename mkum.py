@@ -33,9 +33,6 @@ class MyFrame(QtGui.QMainWindow):
         # и вызываем функ-цию установки положения на экране
 #        self.resize(400, 200)
         self.center()
-    
-        self.num = 0
-        self.devInfo = {}
         
         # устанавливаем имя окна и иконку
         self.setWindowTitle(u'Калибровка измерителя УМ')
@@ -61,23 +58,12 @@ class MyFrame(QtGui.QMainWindow):
         self.createActions()
         self.createToolbar()
         self.createMenu()
-        
-            
+                  
     def evPrev(self):
-        # self.interface.repeatStop()
         pass
     
     def evNext(self):
-        self.interface.sendData('55 AA 01 00 01')
         pass
-    
-    def evPressTree(self, item, a):
-        ''' (self, QTreeWidgetItem, int) -> None
-        
-            Реакция на выбор элемента в дереве проектов.
-        '''
-        print 'evPressTree item = %d' % a
-        print 'item =', item.text(a)
         
     def center(self):
         ''' (self) -> None
@@ -162,24 +148,6 @@ class MyFrame(QtGui.QMainWindow):
             self.aClosePort.setEnabled(True)
         except:
             print 'evOpenPort неудалось открыть порт'
-                  
-    def fillProjectTree(self, name):
-        ''' (self, str) -> None
-            
-            Заполнение ветки дерева проектов с именем name.
-        '''
-        toplvl = QtGui.QTreeWidgetItem()
-        toplvl.setText(0, name)
-        self.tProject.addTopLevelItem(toplvl)
-        self.num += 1
-        for i in range(10):
-            cities = QtGui.QTreeWidgetItem()
-            cities.setText(0, u'%d' % i)
-            toplvl.addChild(cities)
-            self.devInfo[cities] = [i, u"Текст %d" % i]
-#            self.tProject.addTopLevelItem(cities)
-   
-   
    
     def createStatusBar(self, parent=None):
         ''' (self, parent) -> QStatusBar
