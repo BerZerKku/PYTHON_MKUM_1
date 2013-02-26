@@ -36,7 +36,7 @@ class MyFrame(QtGui.QMainWindow):
         
         # устанавливаем имя окна и иконку
         self.setWindowTitle(u'Калибровка измерителя УМ')
-        self.setWindowIcon(QtGui.QIcon('icons/MustHave/user_24x24.png'))
+        self.setWindowIcon(QtGui.QIcon(':icons/MustHave/user_24x24.png'))
         
         # установка типа окна
         #     "PyQT.Создание оконных приложений на Python 3" стр. 53

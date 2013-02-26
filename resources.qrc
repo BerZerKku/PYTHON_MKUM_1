@@ -11,5 +11,6 @@
     <file>icons/MustHave/settings_24x24.png</file>
     <file>icons/MustHave/open_24x24.png</file>
     <file>icons/MustHave/save_24x24.png</file>
+	<file>icons/MustHave/user_24x24.png</file>
   </qresource>
 </RCC>
