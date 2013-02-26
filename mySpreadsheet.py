@@ -8,7 +8,6 @@ import sys
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
-# from PyQt4 import Qt
 
 
 class articleValidate(QtGui.QItemDelegate):
@@ -255,7 +254,9 @@ class MySpreadsheet(QtGui.QTableWidget):
             tmp = self.item(row1, col).text()
             self.item(row1, col).setText(self.item(row2, col).text())
             self.item(row2, col).setText(tmp)
-
+                   
+    def _checkTolerance(self):
+        pass
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

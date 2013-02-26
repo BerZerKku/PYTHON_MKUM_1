@@ -328,6 +328,9 @@ class TabCheck(QtGui.QWidget):
         ''' (self) -> None
             
             Открытие файла данных с последующим заполнением таблицы.
+            Если напряжение измеренное прибором = 0, то строка игнорируется.
+            В старых файлах первым байтом идет сопротивление = 75Ом.
+            В новых структура изменена и первым байтом идет 1.
         '''
         filename = QtGui.QFileDialog.getOpenFileName(self, u"Открыть",
                                         filter="Data Files (*.dat)")
@@ -342,35 +345,141 @@ class TabCheck(QtGui.QWidget):
         
         data = []
         for char in data_bin:
-            data.append(char.encode('hex').upper())
+            data.append(my_func.charToStrHex(char))
         del data_bin
         
         # сопротивление
-        r = my_func.strHexToInt(data[0])
+        try:
+            r = my_func.strHexToInt(data[0])
+        except:
+            return
+        
+        # старыше прошивки - версия 1, новые 2
+        # в новых прошивках первым байтом идет 0
+        if r == 0:
+            self.newData(data)
+        else:
+            self.oldData(data)
+   
+    def newData(self, data):
+        ''' (self, list) -> bool
+        
+            Открытие файла данных нового образца.
+        '''
+        print data
+        
+        r = my_func.strHexToInt(data[1])
         print r
+        
+        uOut = []
+        for i in range(self.adjTable.rowCount()):
+            val = ''.join(data[2 + i * 4: 2 + i * 4 + 4])
+            uOut.append(my_func.strHexToFloat(val, 'le'))
+        print uOut
+        
+        uOut = []
+        uOutADC = []
+        iOut = []
+        iOutADC = []
+        rOutADC = []
+        
+        offset = 2
+        for i in range(self.adjTable.rowCount()):
+            val = ''.join(data[offset: offset + 4])
+            offset += 4
+            uOut.append(round(my_func.strHexToFloat(val, 'le'), 1))
+            
+            val = ''.join(data[offset: offset + 4])
+            offset += 4
+            uOutADC.append(round(my_func.strHexToFloat(val, 'le'), 1))
+            
+            val = ''.join(data[offset: offset + 2])
+            offset += 2
+            iOut.append(my_func.strHexToInt(val, 'le'))
+            
+            val = ''.join(data[offset: offset + 2])
+            offset += 2
+            iOutADC.append(my_func.strHexToInt(val, 'le'))
+            
+            val = ''.join(data[offset: offset + 4])
+            offset += 4
+            rOutADC.append(round(my_func.strHexToFloat(val, 'le'), 1))
+            
+        # заполнение таблицы полученными данными
+        self.adjTable.clearTable()
+        for i in range(len(uOut)):
+            data = [uOut[i], uOutADC[i], iOut[i], iOutADC[i], r]
+            self.adjTable.addRowData(data)
+         
+    def oldData(self, data):
+        ''' (self, list) -> bool
+            
+            Открытие файла данных старого образца.
+        '''
+        # сопротивление
+        r = my_func.strHexToInt(data[0])
+        
+        # кол-во измерений для считывания
+        numValues = self.adjTable.rowCount()
         
         # напряжения измеренные прибором
         uOut = []
-        for i in range(6):
-            u = my_func.strHexToInt(data[i + 1])
-            if u == 0:
-                break
-            uOut.append(u)
-        print uOut
+        try:
+            for i in range(numValues):
+                u = my_func.strHexToInt(data[i + 1])
+                if u == 0:
+                    break
+                uOut.append(float(u))
+#            print u"Volatages =", uOut
+        except:
+            return
         
         # ток измеренный прибором
-        if r == 0:
-            print u'Error:'
-            print u'Считанное сопротивление из файла равно 0'
-            raise ValueError
         iOut = []
         for u in uOut:
             iOut.append(int(round(u * 1000 / r)))
-        print iOut
+#        print u"Currents =", iOut
         
-        # ток 
+        # напряжение измеренное МкУМ
+        uOutADC = []
+        try:
+            for i in range(numValues):
+                tmp = data[41 + i * 4: 41 + i * 4 + 4]
+                tmp = ''.join(tmp)
+                tmp = round(my_func.strHexToFloat(tmp, 'le'), 1)
+                uOutADC.append(tmp)
+        except:
+            return
+#        print u"ADC vlotages =", uOutADC
         
-         
+        # ток имзеренный МкУМ
+        iOutADC = []
+        try:
+            for i in range(numValues):
+                tmp = data[201 + i * 2: 201 + i * 2 + 2]
+                tmp = ''.join(tmp)
+                tmp = my_func.strHexToInt(tmp, 'le')
+                iOutADC.append(tmp)
+        except:
+            return
+#        print u'ADC currents =', iOutADC
+        
+        # сопротивление измеренное МкУМ
+        rOutADC = []
+        for i in range(numValues):
+            if iOutADC[i] != 0:
+                tmp = round((1000 * uOutADC[i]) / iOutADC[i], 1)
+            else:
+                tmp = 1
+            rOutADC.append(tmp)
+#        print u"ADC resistances =", rOutADC
+        
+        # заполнение таблицы полученными данными
+        self.adjTable.clearTable()
+        for i in range(len(uOut)):
+            data = [uOut[i], uOutADC[i], iOut[i], iOutADC[i], r]
+            self.adjTable.addRowData(data)
+        
     def saveFileAs(self):
         ''' (self) -> None
             
@@ -381,14 +490,43 @@ class TabCheck(QtGui.QWidget):
         if filename:
             self.saveFile(name=filename)
     
-    def saveFile(self, chacked=False, name='MkUM.dat'):
+    def saveFile(self, chacked=False, name='check.dat'):
         ''' (self, name) -> None
             
             Сохранение файла данных с путем/имененм name
             chacked - для SIGNAL от кнопки
         '''
         # считаем файл прошивки и разобъем ее на строки
-        pass
+        
+        data = ['00', ]
+        data.append(my_func.intToStrHex(75))
+        
+        for i in range(self.adjTable.rowCount()):
+            val = float(self.adjTable.item(i, 0).text())
+            data.append(my_func.floatToStrHex(val, 'le'))
+        
+#        for i in range(self.adjTable.rowCount()):
+            val = float(self.adjTable.item(i, 1).text())
+            data.append(my_func.floatToStrHex(val, 'le'))
+            
+#        for i in range(self.adjTable.rowCount()):
+            val = int(self.adjTable.item(i, 2).text())
+            data.append(my_func.intToStrHex(val, 4, 'le'))
+            
+#        for i in range(self.adjTable.rowCount()):
+            val = int(self.adjTable.item(i, 3).text())
+            data.append(my_func.intToStrHex(val, 4, 'le'))
+            
+#        for i in range(self.adjTable.rowCount()):
+            val = float(self.adjTable.item(i, 4).text())
+            data.append(my_func.floatToStrHex(val, 'le'))
+        
+        # bin-file
+        fSave = open(name, 'wb')
+        for val in data:
+            tmp = val.decode('hex')
+            fSave.write(tmp)
+        fSave.close()
   
     def intToHex(self, val):
         ''' (self, int) -> str
@@ -440,7 +578,61 @@ class TabCheck(QtGui.QWidget):
         
         crc = "%.2x" % (256 - (crc % 256))
         return crc.upper()
+    
+    # Применимость метода - нулевая. Необходимо перенести в таблицу.
+    def checkTolerance(self, ref, val, warn=0.05, err=0.1):
+        ''' (num, num, float, float) -> Qt.[color]
+            
+            Проверка измеренной погрешности на диапазоны (значение включено)
+            "предупреждения" warn и ошибки err.
+            В зависимости от этого возвращает цвет:
+            зеленый - норм, желтый предупреждение, красный - ошибка.
+            Значения могут быть как числом, так и строкой.
+            
+            @param ref эталонное значение
+            @param val измеренное значение
+            @param warn порог предупреждения, например 0.05 это 5%
+            @param err порог ошибки, например 0.10 это 10%
+            
+            @return Цвет
+            @arg Qt.red
+            @arg Qt.green
+            @arg Qt.yellow
+        '''
+        try:
+            ref = float(ref)
+        except:
+            txt = u"Error: Ошибочный тип данных ref,", type(ref)
+            raise TypeError(txt)
         
+        try:
+            val = float(val)
+        except:
+            txt = u"Error: Ошибочный тип данных val,", type(val)
+            raise TypeError(txt)
+        
+        try:
+            warn = float(warn)
+        except:
+            txt = u"Error: Ошибочный тип данных warn,", type(warn)
+            raise TypeError(txt)
+            
+        try:
+            err = float(err)
+        except:
+            txt = u"Error: Ошибочный тип данных err,", type(err)
+            raise TypeError(txt)
+            
+        tmp = abs((ref - val) / ref)
+        if  tmp >= err:
+            color = Qt.red
+        elif tmp >= warn:
+            color = Qt.yellow
+        else:
+            color = Qt.green
+            
+        return color
+            
 #    def debugSaveFile(self, data):
 #        ''' (self) -> None
       
@@ -457,49 +649,69 @@ class TabCheck(QtGui.QWidget):
             
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
-    
+
     my_frame = TabCheck()
     my_frame.show()
-    
-    # data 1
-    # my_frame.debugSaveFile([[43, 5, 88, 10, 179, 20, 270, 30],
-    #                        [39, 66, 79, 133, 159, 266, 242, 400]])
+   
+# data 1
+#    my_frame.debugSaveFile([[43, 5, 88, 10, 179, 20, 270, 30],
+#                        [39, 66, 79, 133, 159, 266, 242, 400]])
 #    my_frame.debugSaveFile([[40, 5, 81, 10, 172, 20, 263, 30],
 #                            [45, 66, 90, 133, 187, 266, 283, 400]])
-    
+
     # установим вид отображения
     QtGui.QApplication.setStyle('Cleanlooks')
-    
+   
     app.exec_()
 
 
-# import unittest
-#
-#
-# class TestTabCheck(unittest.TestCase):
-#    """${short_summary_of_testcase}
-#    """
-#    def setUp(self):
-# #        self.testFrame = TabCheck()
-#        self.app = QtGui.QApplication(sys.argv)
-#        self.form = TabCheck()
+import unittest
 
-#    def tearDown(self):
-#        """${no_tearDown_required}
-#        """
-#    pass  # skip tearDown
-#
-#    def testIntToHex(self):
-#        """${short_description_of_test}
-#        """
-# #        print self.testFrame
-#        self.assertEqual(self.form.intToHex(5), '0500')
-#        self.assertEqual(self.form.intToHex(270), '0E01')
 
+class TestTabCheck(unittest.TestCase):
+    """${short_summary_of_testcase}
+    """
+    def setUp(self):
+        app = QtGui.QApplication(sys.argv)
+        self.form = TabCheck()
+
+    def tearDown(self):
+        """${no_tearDown_required}
+        """
+        pass  # skip tearDown
+
+    def testIntToHex(self):
+        """${short_description_of_test}
+        """
+        self.assertEqual(self.form.intToHex(5), '0500')
+        self.assertEqual(self.form.intToHex(270), '0E01')
+        
+    def testCheckTolerance(self):
+        '''
+            Проверка функции checkToleranceю
+        '''
+        self.assertEqual(self.form.checkTolerance(100, 96), Qt.green)
+        self.assertEqual(self.form.checkTolerance("100", "97"), Qt.green)
+        self.assertEqual(self.form.checkTolerance(100, 95), Qt.yellow)
+        self.assertEqual(self.form.checkTolerance(100, 90), Qt.red)
+        self.assertEqual(self.form.checkTolerance(100, 99, 0.1, 0.01), Qt.red)
+        self.assertEqual(self.form.checkTolerance(100, 70, 0.1, "0.2"), Qt.red)
+        
+        self.assertRaises(TypeError, self.form.checkTolerance, None, 100)
+        self.assertRaises(TypeError, self.form.checkTolerance, 100, None)
+        self.assertRaises(TypeError, self.form.checkTolerance, 1, 1, None)
+        self.assertRaises(TypeError, self.form.checkTolerance, 1, 1, 1, None)
+        self.assertRaises(TypeError, self.form.checkTolerance, "a", 1)
+        self.assertRaises(TypeError, self.form.checkTolerance, 1, "a")
+        self.assertRaises(TypeError, self.form.checkTolerance, 1, 1, "a")
+        self.assertRaises(TypeError, self.form.checkTolerance, 1, 1, 1, "a")
+        
+
+    # почему-то вызывается отладчик Visual Studio, видимо не все в порядке
 #    def testCalcCRC(self):
 #        self.assertEqual(
-#                self.form.calcCRC(':1007D00091789A998141E17A543F2B0005005800')
-#                ,'A5')
+
+#                , 'A5')
 #        self.assertEqual(
 #                self.form.calcCRC(':1007E0000A00B30014000E011E00270042004F00')
-#                ,'53')
+#                , '53')
