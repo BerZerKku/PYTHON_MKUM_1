@@ -3,6 +3,11 @@
 Created on 24.12.2012
 
 @author: Shcheblykin
+
+python: 2.7.15
+pySerial: 3.4
+pyQT: 4.9.5-1 x64
+
 '''
 import sys
 import serial
@@ -24,8 +29,13 @@ class mySerial(QtGui.QWidget):
                  parent=None):
         QtGui.QWidget.__init__(self, parent)
         
-        self.PARITY = {'N': 'None', 'O': 'Odd', 'E': 'Even', \
-                       'M': 'Mark', 'S': 'Space'}
+        self.PARITY = {
+            'N': 'None', 
+            'O': 'Odd', 
+            'E': 'Even', 
+            'M': 'Mark', 
+            'S': 'Space'
+        }
         
         # установка фиксированного размера окна
         flag = QtCore.Qt.Window
@@ -35,20 +45,20 @@ class mySerial(QtGui.QWidget):
         # флаг наличия изменений
         self._modify = False
         
+        # создание элементов виджета
+        self.createWidget()
+        
         # начальная настройка порта
         self.settings = {}
         self.setPort(port)
         self.setBaudRate(baudrate)
         self.setByteSize(bytesize)
         self.setParity(parity)
-        self.setStopBits(stopbits)
-        
-        # создание элементов виджета
-        self.createWidget()
+        self.setStopBits(stopbits) 
         
         # последовательный порт
         self._port = serial.Serial()
-        self._port.setTimeout(0)
+        self._port.timeout = 0;       
         self.setCom("55 AA 02 00 02")
         
         # флаг принятой посылки (True - есть посылка)
@@ -80,19 +90,22 @@ class mySerial(QtGui.QWidget):
         
             Начало работы с портом. В случае ошибки возвращает False.
         '''
-        self._port.setPort(self.settings['port'])
-        self._port.setBaudrate(self.settings['baudrate'])
-        self._port.setByteSize(self.settings['bytesize'])
-        self._port.setParity(self.settings['parity'])
-        self._port.setStopbits(self.settings['stopbits'])
         
+        self._port.setPort(str(self.settings['port']))
+        self._port.baudrate = str(self.settings['baudrate'])
+        self._port.bytesize = self.settings['bytesize']
+        self._port.parity = str(self.settings['parity'])
+        self._port.stopbits = self.settings['stopbits']
+        
+        print "Порт" + str(self._port),
         try:
             self._port.open()
             self._timerTr.start()
             self._timerRc.start()
+            print "открыт." 
         except:
             print self.openPort
-            print "Не удалось открыть порт",
+            print "не удалось открыть."
             
     def closePort(self):
         ''' (self) -> bool
@@ -107,6 +120,9 @@ class mySerial(QtGui.QWidget):
             print self.closePort
             print "Не удалось закрыть порт"
             raise
+    
+    def isOpen(self):
+        return self._port.isOpen()
     
     def _cycleRc(self):
         ''' (self) -> None
@@ -419,8 +435,9 @@ class mySerial(QtGui.QWidget):
         available = []
         for i in range(256):
             try:
-                s = serial.Serial(i)
+                s = serial.Serial('COM' + str(i))
                 available.append(s.portstr)
+                print s.name;
                 s.close()
             except serial.SerialException, e:
                 # print s, e
@@ -501,11 +518,11 @@ class mySerial(QtGui.QWidget):
         self.setLayout(hbox)
         
         # заполнение полей настроек
-        self.fillPortBox()
-        self.fillBaudRateBox()
-        self.fillStopBitsBox()
-        self.fillParityBox()
-        self.fillByteSize()
+        self.fillPortBox()      
+        self.baudRateEdit.addItems([str(x) for x in serial.Serial.BAUDRATES])
+        self.stopBitsEdit.addItems([str(x) for x in serial.Serial.STOPBITS])
+        self.parityEdit.addItems([str(self.PARITY[x]) for x in serial.Serial.PARITIES])
+        self.byteSizeEdit.addItems([str(x) for x in serial.Serial.BYTESIZES])
         
         # подключим сигналы
         self.portEdit.currentIndexChanged.connect(self.setFlagModify)
@@ -610,7 +627,7 @@ if __name__ == '__main__':
     my_frame.closePort()
     
     # проверка открытия порта с нужными настройками
-    my_frame.setSettings(settings={'port': 'COM2', 'baudrate': 1200})
+    my_frame.setSettings(settings={'port': 'COM6', 'baudrate': 1200})
     my_frame.openPort()
     my_frame.closePort()
     
