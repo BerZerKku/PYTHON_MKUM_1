@@ -1,17 +1,17 @@
 # -*- coding: cp1251 -*-
-'''
+"""
 Created on 19.12.2012
 
 @author: Shcheblykin
-'''
+"""
 import sys
 from PyQt4 import QtGui
 from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
+# from PyQt4.QtCore import Qt
 
 import tab_adjust
 import tab_check
-import mySerial
+import MySerial
 # import mySpreadsheet
 # подключение библиотеки иконок
 import resources_rc
@@ -19,11 +19,14 @@ import resources_rc
 
 class MyFrame(QtGui.QMainWindow):
     def __init__(self, parent=None):
+        """
+            Конструктор.
+        """
         QtGui.QMainWindow.__init__(self, parent)
 
         # определяем геометрические размеры окна и
         # положение на экране
-#        self.setGeometry(300, 300, 250, 150)
+        # self.setGeometry(300, 300, 250, 150)
     
         # внешний вид
         # Windows, WindowsXP, Motif, CDE, Plastique, Cleanlooks
@@ -31,7 +34,7 @@ class MyFrame(QtGui.QMainWindow):
 
         # определяем геометрические размеры окна
         # и вызываем функ-цию установки положения на экране
-#        self.resize(400, 200)
+        # self.resize(400, 200)
         self.center()
         
         # устанавливаем имя окна и иконку
@@ -39,362 +42,348 @@ class MyFrame(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon(':icons/MustHave/user_24x24.png'))
         
         # установка типа окна
-        #     "PyQT.Создание оконных приложений на Python 3" стр. 53
-        #     установка стандартных настроек
-#        self.setWindowFlags(QtCore.Qt.Tool)
-        #     установка необходимых флагов
-        #     "PyQT.Создание оконных приложений на Python 3" стр. 54
-        #     MSWindowsFixedSizeDialogHint - запрет изменения  размеров окна
+        #   "PyQT.Создание оконных приложений на Python 3" стр. 53
+        #   установка стандартных настроек
+        # self.setWindowFlags(QtCore.Qt.Tool)
+        #   установка необходимых флагов
+        #   "PyQT.Создание оконных приложений на Python 3" стр. 54
+        #   MSWindowsFixedSizeDialogHint - запрет изменения  размеров окна
         flag = QtCore.Qt.Window
         flag |= QtCore.Qt.MSWindowsFixedSizeDialogHint
         self.setWindowFlags(flag)
         
         # определяем строку подсказки и шрифт
-#        self.setToolTip(u'This is <b>myFrame</b> widget')
-#        QtGui.QToolTip.setFont(QtGui.QFont('oldEnglish', 10))
+        # self.setToolTip(u'This is <b>myFrame</b> widget')
+        # QtGui.QToolTip.setFont(QtGui.QFont('oldEnglish', 10))
         
-        self.createPort()
-        self.createMainWindow()
-        self.createActions()
+        self.create_port()
+        self.create_main_window()
+        self.create_actions()
         self.createToolbar()
-        self.createMenu()
+        self.create_menu()
                   
-    def evPrev(self):
+    def ev_prev(self):
+        """
+            None
+        """
         pass
     
-    def evNext(self):
+    def ev_next(self):
+        """
+            None
+        """
         pass
         
     def center(self):
-        ''' (self) -> None
-        
+        """
             Установка окна посередине экрана.
-        '''
+        """
         screen = QtGui.QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move((screen.width() - size.width()) / 2,
-                  (screen.height() - size.height()) / 2)
-        
-    def closeEvent(self, event):
-        ''' (self, PyQt4.QtGui.QCloseEvent) -> None
-        
-            Переопределение обработчика закрытия окна
-        '''
-#        reply = QtGui.QMessageBox.question(self, 'Message',
-#        "Are you sure to quit?", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
-#
-#        if reply == QtGui.QMessageBox.Yes:
-#            event.accept()
-#        else:
-#            event.ignore()
-        pass
+        self.move(
+            (screen.width() - size.width()) / 2,
+            (screen.height() - size.height()) / 2
+        )
     
-    def evCancel(self):
-        if self.tProject.currentItem() in self.devInfo:
-            print self.devInfo[self.tProject.currentItem()]
-        else:
-            pass
-    
-    def evSetupPort(self):
-        ''' (self) -> None
-            
-            Установка новых значений настроек порта.
-        '''
-#        self.interface.setPort(self.setupCOM.portEdit.currentText())
-#        self.interface.setByteSize(self.setupCOM.byteSizeEdit.currentText())
-#        self.interface.setBaudRate(self.setupCOM.baudRateEdit.currentText())
-#        self.interface.setParity(self.setupCOM.parityEdit.currentText())
-#        self.interface.setStopBits(self.setupCOM.stopBitsEdit.currentText())
-        self.setupCOM.clearFlagModify()
-    
-    def evShowSetupPort(self):
-        ''' (self) -> None
-        
+    def show_setup_port(self):
+        """
             Открытие окна настройки порта.
-        '''
+        """
         # выведем форму на экран
-        self.setupCOM.show()
-    
-    def updatePorts(self):
-        self.setupCOM.fillPortBox(self.interface.getAvailablePorts(),
-                                  self.interface.getPortName())
+        self.com_port.show()
              
-    def evClosePort(self):
-        ''' (self) -> None
-            
+    def close_port(self):
+        """
             Прекращение работы с ком-портом.
-        '''
+        """
         try:
-            self.setupCOM.closePort()
-            
-            self.aOpenPort.setEnabled(True)
-            self.aSetupPort.setEnabled(True)
-            self.aClosePort.setDisabled(True)
-        except:
-            print 'evClosePort неудалось закрыть порт'
+            self.com_port.close_port()
+        except Exception as e:
+            QtGui.QMessageBox.warning(
+                self,
+                u"Ошибка",
+                e.message,
+                QtGui.QMessageBox.Ok
+            )
+        else:
+            self.act_open_port.setEnabled(True)
+            self.act_setup_port.setEnabled(True)
+            self.act_close_port.setDisabled(True)
+            self.bar_port.setText(
+                u"Порт {} закрыт.".format(self.com_port.get_port())
+            )
     
-    def evOpenPort(self):
-        ''' (self) -> None
-        
+    def open_port(self):
+        """
             Открыть ком-порт. Начать работу.
-        '''
+        """
         try:
-            self.setupCOM.openPort()
-            
-#            self.setupCOM.sendData("55 AA 01 00 01")
-                
-            self.aOpenPort.setDisabled(True)
-            self.aSetupPort.setDisabled(True)
-            self.aClosePort.setEnabled(True)
-        except:
-            print 'evOpenPort неудалось открыть порт'
-   
-    def createStatusBar(self, parent=None):
-        ''' (self, parent) -> QStatusBar
-        
+            self.com_port.open_port()
+        except Exception as e:
+            QtGui.QMessageBox.warning(
+                self,
+                u"Ошибка",
+                e.message,
+                QtGui.QMessageBox.Ok
+            )
+        else:
+            self.act_open_port.setDisabled(True)
+            self.act_setup_port.setDisabled(True)
+            self.act_close_port.setEnabled(True)
+            self.bar_port.setText(
+                u"Порт {} открыт.".format(self.com_port.get_port())
+            )
+
+    def create_status_bar(self):
+        """
             Дополнительно создает необходимые Widget-ы.
-            Создание и заполнение статус-бара.
-            Последний фиджет растягивается до конца окна.
-        '''
+            Создается и заполненяется статус-бар.
+            Последний виджет растягивается до конца окна.
+
+            @return Статус-бар (QtGui.QStatusBar).
+        """
         self.bar = QtGui.QStatusBar()
         
-        self.barPort = QtGui.QLabel(u' %s ' % u'Порт')
-        self.barPort.setMinimumWidth(30)
-        self.barPort.setAlignment(QtCore.Qt.AlignHCenter)
+        self.bar_port = QtGui.QLabel(u' %s ' % u'Порт')
+        self.bar_port.setMinimumWidth(30)
+        self.bar_port.setAlignment(QtCore.Qt.AlignHCenter)
         
-        self.barBaudRate = QtGui.QLabel(u' %s ' % u'')
-        self.barBaudRate.setMinimumWidth(30)
-        self.barBaudRate.setAlignment(QtCore.Qt.AlignHCenter)
+        # self.barBaudRate = QtGui.QLabel(u' %s ' % u'')
+        # self.barBaudRate.setMinimumWidth(30)
+        # self.barBaudRate.setAlignment(QtCore.Qt.AlignHCenter)
+        #
+        # self.barSost = QtGui.QLabel(u' %s ' % u'')
+        # self.barSost.setMinimumWidth(20)
         
-        self.barSost = QtGui.QLabel(u' %s ' % u'')
-        self.barSost.setMinimumWidth(20)
-        
-        self.bar.addWidget(self.barPort)
-        self.bar.addWidget(self.barBaudRate)
-        self.bar.addWidget(self.barSost, 1)
+        self.bar.addWidget(self.bar_port)
+        # self.bar.addWidget(self.barBaudRate)
+        # self.bar.addWidget(self.barSost, 1)
         
         # выкл. возможность растягивания окна
         self.bar.setSizeGripEnabled(False)
         
         return self.bar
     
-    def createActions(self):
-        ''' (self) -> None
-        
-            Создание действий
-        '''
-        # задаем путь к иконкам хранящимся в resources_pc.py (resources.qrc)
+    def create_actions(self):
+        """
+            Создание действий.
+        """
+        # задаем путь к иконкам хранящимся в resources_pc.py
+        # (resources.qrc)
         folder_icons = ':icons/MustHave/'
         
         # создаем действие "Закрытие формы"
         # задаем горячую кнопку
         # и свзязываем действие с сигналом
         icon = folder_icons + 'Log Out_24x24.png'
-        self.aExit = QtGui.QAction(QtGui.QIcon(icon), u'Выход', self)
-        self.aExit.setShortcut("Ctrl+Q")
-        self.aExit.triggered.connect(self.close)
+        self.act_exit = QtGui.QAction(QtGui.QIcon(icon), u'Выход', self)
+        self.act_exit.setShortcut("Ctrl+Q")
+        self.act_exit.triggered.connect(self.close)
 
-#        self.connect(self.aExit, QtCore.SIGNAL('triggered()'), self.close)
-        
+        # self.connect(self.aExit, QtCore.SIGNAL('triggered()'), self.close)
+
         # создаем действие "Инкремент тика"
         icon = folder_icons + 'Previous_24x24.png'
-        self.aPrev = QtGui.QAction(QtGui.QIcon(icon), u'Предыдущий', self)
-        self.aPrev.triggered.connect(self.evPrev)
-        self.aPrev.setDisabled(True)
+        self.act_prev = QtGui.QAction(QtGui.QIcon(icon), u'Предыдущий', self)
+        self.act_prev.triggered.connect(self.ev_prev)
+        self.act_prev.setDisabled(True)
 #        self.connect(self.aPrev, QtCore.SIGNAL('triggered()'),
 #                     self.evPrev)
         
         # создаем действие "Декремент тика"
         icon = folder_icons + 'Next_24x24.png'
-        self.aNext = QtGui.QAction(QtGui.QIcon(icon), u'Следующий', self)
-        self.aNext.triggered.connect(self.evNext)
-        self.aNext.setDisabled(True)
-#        self.connect(self.aNext, QtCore.SIGNAL('triggered()'),
-#                     self.evNext)
+        self.act_next = QtGui.QAction(QtGui.QIcon(icon), u'Следующий', self)
+        self.act_next.triggered.connect(self.ev_next)
+        self.act_next.setDisabled(True)
+#        self.connect(self.aNext, QtCore.SIGNAL('triggered()'), self.evNext)
         
         # создаем действие "Помощь"
         icon = folder_icons + 'help_24x24.png'
-        self.aHelp = QtGui.QAction(QtGui.QIcon(icon), u'Помощь', self)
-        self.aHelp.setDisabled(True)
+        self.act_help = QtGui.QAction(
+            QtGui.QIcon(icon), u'Помощь', self)
+        self.act_help.setDisabled(True)
         
         # создаем действие "О программе"
         icon = folder_icons + 'information_24x24.png'
-        self.aAbout = QtGui.QAction(QtGui.QIcon(icon), u'О программе', self)
-        self.aAbout.setDisabled(True)
+        self.act_about = QtGui.QAction(QtGui.QIcon(icon), u'О программе', self)
+        self.act_about.setDisabled(True)
         
         # действие "Создать новый
         icon = folder_icons + 'new_24x24.png'
-        self.aNewFile = QtGui.QAction(QtGui.QIcon(icon), u'Новый...', self)
-        self.aNewFile.setShortcut("Ctrl+N")
-        self.aNewFile.setDisabled(True)
+        self.act_new_file = QtGui.QAction(QtGui.QIcon(icon), u'Новый...', self)
+        self.act_new_file.setShortcut("Ctrl+N")
+        self.act_new_file.setDisabled(True)
         
         # создаем действие "Открыть"
         icon = folder_icons + 'open_24x24.png'
-        self.aOpenFile = QtGui.QAction(QtGui.QIcon(icon), u'Открыть...', self)
-        self.aOpenFile.setShortcut("Ctrl+O")
-        self.aOpenFile.setDisabled(True)
+        self.act_open_file = QtGui.QAction(
+            QtGui.QIcon(icon), u'Открыть...', self)
+        self.act_open_file.setShortcut("Ctrl+O")
+        self.act_open_file.setDisabled(True)
         
         # создаем действие "Сохранить"
         icon = folder_icons + 'save_24x24.png'
-        self.aSaveFile = QtGui.QAction(QtGui.QIcon(icon), u'Сохранить', self)
-        self.aSaveFile.setShortcut("Ctrl+S")
-        self.aSaveFile.setDisabled(True)
+        self.act_save_file = QtGui.QAction(
+            QtGui.QIcon(icon), u'Сохранить', self)
+        self.act_save_file.setShortcut("Ctrl+S")
+        self.act_save_file.setDisabled(True)
         
         # создаем действие "Сохранить как..."
-        self.aSaveAsFile = QtGui.QAction(u'Сохранить как...', self)
-        self.aSaveAsFile.setDisabled(True)
+        self.act_save_as_file = QtGui.QAction(u'Сохранить как...', self)
+        self.act_save_as_file.setDisabled(True)
         
         # действие "Настройка порта"
         icon = folder_icons + 'settings_24x24.png'
-        self.aSetupPort = \
-            QtGui.QAction(QtGui.QIcon(icon), u'Настройки порта', self)
-        self.aSetupPort.triggered.connect(self.evShowSetupPort)
-        self.aSetupPort.setShortcut("Alt+S")
+        self.act_setup_port = QtGui.QAction(
+            QtGui.QIcon(icon), u'Настройки порта', self)
+        self.act_setup_port.triggered.connect(self.show_setup_port)
+        self.act_setup_port.setShortcut("Alt+S")
               
-        # создаем действие "Связь" , открыть порт
-        # создаем действие "Стоп", закрыть порт
+        # создаем действие "Пуск" , открыть порт
         icon = folder_icons + 'check_24x24.png'
-        self.aOpenPort = QtGui.QAction(QtGui.QIcon(icon), u'Пуск', self)
-        
+        self.act_open_port = QtGui.QAction(QtGui.QIcon(icon), u'Пуск', self)
+
+        # создаем действие "Стоп", закрыть порт
         icon = folder_icons + 'cancel_24x24.png'
-        self.aClosePort = QtGui.QAction(QtGui.QIcon(icon), u'Стоп', self)
-        self.aClosePort.setEnabled(False)
-        self.aClosePort.triggered.connect(self.evClosePort)
-        self.aOpenPort.triggered.connect(self.evOpenPort)
+        self.act_close_port = QtGui.QAction(QtGui.QIcon(icon), u'Стоп', self)
+        self.act_close_port.setEnabled(False)
+        self.act_close_port.triggered.connect(self.close_port)
+        self.act_open_port.triggered.connect(self.open_port)
     
     def createToolbar(self):
-        ''' (self) -> None
+        """ (self) -> None
         
             Создание панели инструментов
-        '''
+        """
         self.toolbar = QtGui.QToolBar()
-        self.toolbar.addAction(self.aExit)
+        self.toolbar.addAction(self.act_exit)
         self.toolbar.addSeparator()  # разделитель
-        self.toolbar.addAction(self.aPrev)
-        self.toolbar.addAction(self.aNext)
+        self.toolbar.addAction(self.act_prev)
+        self.toolbar.addAction(self.act_next)
         self.toolbar.addSeparator()  # разделитель
-        self.toolbar.addAction(self.aSetupPort)
-        self.toolbar.addAction(self.aOpenPort)
-        self.toolbar.addAction(self.aClosePort)
+        self.toolbar.addAction(self.act_setup_port)
+        self.toolbar.addAction(self.act_open_port)
+        self.toolbar.addAction(self.act_close_port)
         self.toolbar.setAutoFillBackground(True)  # прозрачность = 0
         self.addToolBar(self.toolbar)
     
-    def createMenu(self):
-        ''' (self) -> None
+    def create_menu(self):
+        """ (self) -> None
         
             Создание меню
-        '''
-        self.myBar = self.menuBar()
+        """
+        self.my_bar = self.menuBar()
         
         #     Файл
-        self.barFile = self.myBar.addMenu(u'&Проект')
-        self.barFile.addAction(self.aNewFile)
-        self.barFile.addAction(self.aOpenFile)
-        self.barFile.addSeparator()
-        self.barFile.addAction(self.aSaveFile)
-        self.barFile.addAction(self.aSaveAsFile)
-        self.barFile.addSeparator()
-        self.barFile.addAction(self.aExit)
+        self.bar_file = self.my_bar.addMenu(u'&Проект')
+        self.bar_file.addAction(self.act_new_file)
+        self.bar_file.addAction(self.act_open_file)
+        self.bar_file.addSeparator()
+        self.bar_file.addAction(self.act_save_file)
+        self.bar_file.addAction(self.act_save_as_file)
+        self.bar_file.addSeparator()
+        self.bar_file.addAction(self.act_exit)
         
         #     Настройка
-        self.barSetup = self.myBar.addMenu(u'&Настройка')
-        self.barSetup.addAction(self.aSetupPort)
-        self.barSetup.addAction(self.aPrev)
-        self.barSetup.addAction(self.aNext)
+        self.bar_setup = self.my_bar.addMenu(u'&Настройка')
+        self.bar_setup.addAction(self.act_setup_port)
+        self.bar_setup.addAction(self.act_prev)
+        self.bar_setup.addAction(self.act_next)
         
         #     Помощь
-        self.barHelp = self.myBar.addMenu(u'&Помощь')
-        self.barHelp.addAction(self.aHelp)
-        self.barHelp.addSeparator()
-        self.barHelp.addAction(self.aAbout)
+        self.bar_help = self.my_bar.addMenu(u'&Помощь')
+        self.bar_help.addAction(self.act_help)
+        self.bar_help.addSeparator()
+        self.bar_help.addAction(self.act_about)
         
-        self.setStatusBar(self.createStatusBar())
+        self.setStatusBar(self.create_status_bar())
     
-    def createMainWindow(self):
-        ''' (self) -> None
+    def create_main_window(self):
+        """ (self) -> None
         
             Формирование элементов окна
-        '''
+        """
         # Создадим фиктивный фиджет и установим его в наше окно
-        self.mainWidget = QtGui.QWidget(self)
-        self.setCentralWidget(self.mainWidget)
+        self._main_widget = QtGui.QWidget(self)
+        self.setCentralWidget(self._main_widget)
         
         # дерево проекта
-#        self.tProject = QtGui.QTreeWidget()
-#        self.tProject.setFont(QtGui.QFont('oldEnglish', 10))
-#        self.tProject.setMinimumWidth(120)
-#        self.tProject.setHeaderLabel(u'Платы')
-#        self.tProject.setHeaderHidden(True)  # скрыть заголовок
-#        self.tProject.itemClicked.connect(self.evPressTree)
-#        self.fillProjectTree(u'МкУМ')
+        # self.tProject = QtGui.QTreeWidget()
+        # self.tProject.setFont(QtGui.QFont('oldEnglish', 10))
+        # self.tProject.setMinimumWidth(120)
+        # self.tProject.setHeaderLabel(u'Платы')
+        # self.tProject.setHeaderHidden(True)  # скрыть заголовок
+        # self.tProject.itemClicked.connect(self.evPressTree)
+        # self.fillProjectTree(u'МкУМ')
          
         # таблица параметров
         
         # панель с вкладками
         # "PyQT.Создание оконных приложений на Python 3" стр. 155
-        self.myTabWidget = QtGui.QTabWidget()
-        self.myTabWidget.currentChanged.connect(self.setCommand)
-        self.tabAdjust1 = tab_adjust.TabAdjust()
-        self.tabCheck1 = tab_check.TabCheck()
-#        self.tabAdjust2 = tab_adjust.TabAdjust()
-        self.myTabWidget.addTab(self.tabAdjust1, u"Калибровка измерителя")
-        self.myTabWidget.addTab(self.tabCheck1, u"Проверка измерителя")
-#        self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
+        self.my_tab_widget = QtGui.QTabWidget()
+        self.my_tab_widget.currentChanged.connect(self.set_command)
+        self.tab_adjust_1 = tab_adjust.TabAdjust()
+        self.tab_check_1 = tab_check.TabCheck()
+        # self.tabAdjust2 = tab_adjust.TabAdjust()
+        self.my_tab_widget.addTab(self.tab_adjust_1, u"Калибровка измерителя")
+        self.my_tab_widget.addTab(self.tab_check_1, u"Проверка измерителя")
+        # self.myTabWidget.addTab(self.tabAdjust2, u"Проверка измерителя")
        
         gridTab1 = QtGui.QGridLayout()
-#        gridTab1.addWidget(self.lParam, 0, 0, 3, 2)
-        gridTab1.addWidget(self.myTabWidget, 3, 0, 2, 2)
+        # gridTab1.addWidget(self.lParam, 0, 0, 3, 2)
+        gridTab1.addWidget(self.my_tab_widget, 3, 0, 2, 2)
         
         # вертикальная компановка
         vbox = QtGui.QVBoxLayout()
-#        vbox.addWidget(self.tProject)
-#        hbox = QtGui.QHBoxLayout()
-#        hbox.addWidget(QtGui.QPushButton(u'Добавить'))
-#        hbox.addWidget(QtGui.QPushButton(u'Удалить'))
-#        vbox.addLayout(hbox)
+        # vbox.addWidget(self.tProject)
+        # hbox = QtGui.QHBoxLayout()
+        # hbox.addWidget(QtGui.QPushButton(u'Добавить'))
+        # hbox.addWidget(QtGui.QPushButton(u'Удалить'))
+        # vbox.addLayout(hbox)
              
         # горизонтальная компановка
-#        hbox = QtGui.QHBoxLayout()
-#        hbox.addStretch()
-#        hbox.addLayout(vbox)
+        # hbox = QtGui.QHBoxLayout()
+        # hbox.addStretch()
+        # hbox.addLayout(vbox)
         vbox.addLayout(gridTab1)
-#        hbox.addWidget(self.group)
+        # hbox.addWidget(self.group)
         
-        self.mainWidget.setLayout(vbox)
+        self._main_widget.setLayout(vbox)
         
         # группа объектов
         # "PyQT.Создание оконных приложений на Python 3" стр. 152
-#        self.group = QtGui.QGroupBox(u'My group')
-#        self.group.setLayout(vbox)
+        # self.group = QtGui.QGroupBox(u'My group')
+        # self.group.setLayout(vbox)
     
-    def createPort(self):
-        ''' (self) -> None
-        
+    def create_port(self):
+        """\
             Создание переменных для работы с портом.
-        '''
-        self.setupCOM = mySerial.mySerial(parent=self, port='COM2')
-        self.setupCOM.setWindowTitle(u'Настройка порта')
+        """
+        self.com_port = MySerial.MySerial(parent=self)
+        self.com_port.setWindowTitle(u'Настройка порта')
         
         # сделаем окно модальным
         # + в данном случае виджет должен иметь предка self !!!
-        self.setupCOM.setWindowModality(QtCore.Qt.WindowModal)
-        self.connect(self.setupCOM,
-                     QtCore.SIGNAL("readData(PyQt_PyObject, PyQt_PyObject,\
-                     PyQt_PyObject)"),
+        self.com_port.setWindowModality(QtCore.Qt.WindowModal)
+        self.connect(self.com_port,
+                     QtCore.SIGNAL(
+                         'readData(PyQt_PyObject, PyQt_PyObject,\
+                        PyQt_PyObject)'
+                     ),
                      self.protocol)
       
     def protocol(self, com, lenght, data):
-        ''' (self, str, int, list of str) -> None
+        """ (self, str, int, list of str) -> None
         
             Извлечение данных из посылки согласно протоколу.
-        '''
-        index = self.myTabWidget.currentIndex()
+        """
+        index = self.my_tab_widget.currentIndex()
         if index == 0:
-            self.tabAdjust1.readValU.setText(str(int(data[4] + data[5], 16)))
-            self.tabAdjust1.readValI1.setText(str(int(data[6] + data[7], 16)))
-#            self.tabAdjust1.readValI2.setText('0')
-#            self.tabAdjust1.readValU48.setText('0')
-#            self.tabAdjust1.readValUwork.setText('0')
+            self.tab_adjust_1.readValU.setText(str(int(data[4] + data[5], 16)))
+            self.tab_adjust_1.readValI1.setText(str(int(data[6] + data[7], 16)))
+            # self.tabAdjust1.readValI2.setText('0')
+            # self.tabAdjust1.readValU48.setText('0')
+            # self.tabAdjust1.readValUwork.setText('0')
         elif index == 1:
             # байты    функция
             # 0-1, целая и дробная части напряжения рабочей точки
@@ -402,28 +391,31 @@ class MyFrame(QtGui.QMainWindow):
             # 4-5, целая и дробная части напряжения выхода
             # 6-7, целая и дробная части тока выхода
             u = float("%d.%d" % (int(data[4], 16), int(data[5], 16)))
-            self.tabCheck1.readValU.setText('%.1f' % u)
+            self.tab_check_1.readValU.setText('%.1f' % u)
             i = int(data[6] + data[7], 16)
-            self.tabCheck1.readValI1.setText(str(i))
+            self.tab_check_1.readValI1.setText(str(i))
+
             try:
                 r = round((1000 * u) / i, 1)
-            except:
-                r = "Ошибка вычисления"
-            self.tabCheck1.readValR.setText(str(r))
+            except Exception as e:
+                self.tab_check_1.readValR.setText(u'Ошибка вычисления')
+            else:
+                self.tab_check_1.readValR.setText(str(r))
         
         # разрешение приема следующей посылки
-        self.setupCOM.clrReadFlag()
+        self.com_port.clrReadFlag()
     
-    def setCommand(self, index):
-        ''' (self, int) -> None
+    def set_command(self, index):
+        """ (self, int) -> None
         
             Выбор передаваемой команды
-        '''
+        """
         if index == 0:
-            self.setupCOM.setCom('55 AA 02 00 02')
+            self.com_port.set_com('55 AA 02 00 02')
         elif index == 1:
-            self.setupCOM.setCom('55 AA 01 00 01')
-    
+            self.com_port.set_com('55 AA 01 00 01')
+
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     

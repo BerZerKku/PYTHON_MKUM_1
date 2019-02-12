@@ -307,7 +307,10 @@ class TabAdjust(QtGui.QWidget):
         '''
         filename = QtGui.QFileDialog.getOpenFileName(self, u'Открыть',
                                                     filter="HEX Files (*.hex)")
-        
+
+        if not filename:
+            return
+
         try:
             fileHEX = open(filename, 'r')
             origHEX = fileHEX.read()
